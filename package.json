@@ -1,0 +1,90 @@
+{
+  "name": "@robosystems/report-components",
+  "version": "0.1.0",
+  "description": "Source-agnostic React components for rendering XBRL-grade financial statements",
+  "license": "MIT",
+  "author": "RFS LLC",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/index.d.ts",
+      "import": "./dist/adapters/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:all": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
+    "prepublishOnly": "npm run build",
+    "feature:create": "./bin/create-feature.sh",
+    "release:create": "./bin/create-release.sh"
+  },
+  "keywords": [
+    "robosystems",
+    "financial",
+    "xbrl",
+    "react",
+    "report",
+    "holon",
+    "rdf"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "n3": "^1.26.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@testing-library/react": "^16.3.0",
+    "@types/n3": "^1.26.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "happy-dom": "^20.0.8",
+    "prettier": "^3.0.0",
+    "prettier-plugin-organize-imports": "^4.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^4.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RoboFinSystems/robosystems-report-components.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RoboFinSystems/robosystems-report-components/issues"
+  },
+  "homepage": "https://github.com/RoboFinSystems/robosystems-report-components#readme"
+}

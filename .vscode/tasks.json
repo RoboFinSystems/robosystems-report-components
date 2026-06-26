@@ -1,0 +1,119 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Generate SDK",
+      "type": "shell",
+      "command": "ROBOSYSTEMS_API_URL=${input:apiUrl} npm run generate",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "Update Dependencies",
+      "type": "shell",
+      "command": "npm update",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "npm run test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test All",
+      "type": "shell",
+      "command": "npm run test:all",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Fix",
+      "type": "shell",
+      "command": "npm run lint:fix",
+      "problemMatcher": []
+    },
+    {
+      "label": "Format",
+      "type": "shell",
+      "command": "npm run format",
+      "problemMatcher": []
+    },
+    {
+      "label": "Type Check",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "problemMatcher": []
+    },
+    {
+      "label": "Create Feature",
+      "type": "shell",
+      "command": "npm run feature:create ${input:branchType} ${input:branchName} ${input:baseBranch} ${input:updateDependencies}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Create Release",
+      "type": "shell",
+      "command": "npm run release:create ${input:versionType}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Claude Code",
+      "type": "shell",
+      "command": "claude",
+      "args": [],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "versionType",
+      "type": "pickString",
+      "description": "Choose version type:",
+      "default": "patch",
+      "options": ["major", "minor", "patch"]
+    },
+    {
+      "id": "branchType",
+      "type": "pickString",
+      "description": "Choose branch type:",
+      "default": "feature",
+      "options": ["feature", "bugfix", "hotfix", "chore", "refactor"]
+    },
+    {
+      "id": "branchName",
+      "type": "promptString",
+      "description": "Enter branch name (will be prefixed with type/):",
+      "default": ""
+    },
+    {
+      "id": "baseBranch",
+      "type": "promptString",
+      "description": "Enter base branch (default: main):",
+      "default": "main"
+    },
+    {
+      "id": "updateDependencies",
+      "type": "pickString",
+      "description": "Update dependencies after creating branch:",
+      "default": "no",
+      "options": ["yes", "no"]
+    },
+    {
+      "id": "apiUrl",
+      "type": "promptString",
+      "description": "Enter API URL for SDK generation:",
+      "default": "http://localhost:8000/openapi.json"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+# Defense in depth — `package.json` `files` already whitelists only the
+# artifacts we ship (`dist/`, `README.md`, `LICENSE`), but we also want to
+# make absolutely sure stray source, test, or build files never land in a
+# published tarball. This file is an allow-by-default override: npm applies
+# it *after* `files`.
+
+# Source + tests (consumers import from dist/, never source)
+src/
+test/
+
+# Test files (vitest)
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.config.ts
+vitest.setup.ts
+
+# Build + lint config
+tsconfig.json
+tsconfig.*.json
+eslint.config.mjs
+prettier*
+.prettier*
+.eslintrc*
+
+# Tooling / repo hygiene
+.github/
+.githooks/
+.husky/
+.vscode/
+bin/
+scripts/
+*.log
+*.lock
+node_modules/
+coverage/
+.vite/
+CLAUDE.local.md

@@ -1,0 +1,210 @@
+/**
+ * The `holon.trig` file adapter — offline, no backend, no auth.
+ *
+ * Parses TriG (three named graphs: `#scene`, `#boundary`, `#projection`) with
+ * N3.js into a quad store, then traverses the store to emit a `NormalizedReport`.
+ * The three graphs are queried as a union (graph = `null`) — exactly the join
+ * the DataBook converter does on the flat graph. No SPARQL engine is required;
+ * only store traversal.
+ */
+import { DataFactory, Parser, Store } from 'n3'
+import { IRI, humanize, qname } from '../constants'
+import type {
+  CalcAssociation,
+  ElementInfo,
+  EntityInfo,
+  Fact,
+  InformationBlock,
+  NormalizedReport,
+  PeriodInfo,
+  PeriodType,
+  PresAssociation,
+  StructureInfo,
+  UnitInfo,
+} from '../model'
+import type { ReportAdapter } from './types'
+
+const { namedNode } = DataFactory
+
+function makeReaders(store: Store) {
+  const objects = (s: string, p: string) => store.getObjects(namedNode(s), namedNode(p), null)
+  const firstValue = (s: string, p: string): string | null => {
+    const os = objects(s, p)
+    return os.length ? os[0].value : null
+  }
+  const subjectsOfType = (type: string): string[] =>
+    store.getSubjects(namedNode(IRI.type), namedNode(type), null).map((t) => t.value)
+  return { objects, firstValue, subjectsOfType }
+}
+
+function toNumber(raw: string | null): number | null {
+  if (raw === null || raw === '') return null
+  const n = Number(raw)
+  return Number.isNaN(n) ? null : n
+}
+
+/** Parse a `holon.trig` document into the normalized report model. */
+export function parseTrig(trig: string): NormalizedReport {
+  const parser = new Parser({ format: 'application/trig' })
+  const store = new Store(parser.parse(trig))
+  const { objects, firstValue, subjectsOfType } = makeReaders(store)
+
+  // ── Elements ──
+  const elements: Record<string, ElementInfo> = {}
+  for (const id of subjectsOfType(IRI.Element)) {
+    const balance = firstValue(id, IRI.balance)
+    const periodType = firstValue(id, IRI.periodType)
+    elements[id] = {
+      id,
+      qname: qname(id),
+      label: firstValue(id, IRI.prefLabel) ?? humanize(id),
+      balance: balance === 'debit' || balance === 'credit' ? balance : null,
+      periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
+      abstract: firstValue(id, IRI.abstract) === 'true',
+      monetary: firstValue(id, IRI.monetary) === 'true',
+    }
+  }
+
+  // ── Periods ──
+  const periods: Record<string, PeriodInfo> = {}
+  for (const id of subjectsOfType(IRI.Period)) {
+    const declared = firstValue(id, IRI.periodType)
+    const instant = firstValue(id, IRI.instant)
+    const startDate = firstValue(id, IRI.startDate)
+    const endDate = firstValue(id, IRI.endDate)
+    const type: PeriodType =
+      declared === 'instant'
+        ? 'instant'
+        : declared === 'duration'
+          ? 'duration'
+          : instant
+            ? 'instant'
+            : 'duration'
+    const end = (type === 'instant' ? instant : endDate) ?? instant ?? endDate ?? ''
+    periods[id] = { id, type, instant, startDate, endDate, end }
+  }
+
+  // ── Units ──
+  const units: Record<string, UnitInfo> = {}
+  for (const id of subjectsOfType(IRI.Unit)) {
+    const measureTerm = objects(id, IRI.measure)[0]
+    const measure = measureTerm ? qname(measureTerm.value) : 'unknown'
+    units[id] = {
+      id,
+      measure,
+      label: measure.includes(':') ? (measure.split(':').pop() as string) : measure,
+    }
+  }
+
+  // ── Entity ──
+  let entity: EntityInfo | null = null
+  const entityIds = subjectsOfType(IRI.Entity)
+  if (entityIds.length) {
+    const id = entityIds[0]
+    entity = {
+      id,
+      name: firstValue(id, IRI.prefLabel) ?? firstValue(id, IRI.legalName) ?? 'Entity',
+      legalName: firstValue(id, IRI.legalName),
+      country: firstValue(id, IRI.country),
+    }
+  }
+
+  // ── Facts ──
+  const facts: Fact[] = []
+  for (const id of subjectsOfType(IRI.Fact)) {
+    facts.push({
+      id,
+      element: firstValue(id, IRI.element) ?? '',
+      period: firstValue(id, IRI.period) ?? '',
+      unit: firstValue(id, IRI.unit),
+      entity: firstValue(id, IRI.entity),
+      factSet: firstValue(id, IRI.factSet),
+      value: toNumber(firstValue(id, IRI.numericValue)),
+      decimals: firstValue(id, IRI.decimals),
+    })
+  }
+
+  // ── Information Blocks ──
+  const informationBlocks: InformationBlock[] = []
+  for (const id of subjectsOfType(IRI.InformationBlock)) {
+    informationBlocks.push({
+      id,
+      blockType: firstValue(id, IRI.blockType) ?? '',
+      factSet: firstValue(id, IRI.factSet),
+      label: firstValue(id, IRI.prefLabel),
+    })
+  }
+
+  // ── Structures + association → structure membership ──
+  const structures: StructureInfo[] = []
+  const assocStructure = new Map<string, string>()
+  for (const id of subjectsOfType(IRI.Structure)) {
+    structures.push({
+      id,
+      blockType: firstValue(id, IRI.blockType) ?? '',
+      roleUri: firstValue(id, IRI.roleUri),
+      structureName: firstValue(id, IRI.structureName),
+    })
+    for (const assoc of objects(id, IRI.hasAssociation)) {
+      assocStructure.set(assoc.value, id)
+    }
+  }
+
+  // ── Associations ──
+  const calcAssociations: CalcAssociation[] = []
+  const presAssociations: PresAssociation[] = []
+  for (const id of subjectsOfType(IRI.Association)) {
+    const parent = firstValue(id, IRI.from)
+    const child = firstValue(id, IRI.to)
+    if (!parent || !child) continue
+    const type = firstValue(id, IRI.associationType)
+    const order = toNumber(firstValue(id, IRI.order)) ?? 0
+    const role = firstValue(id, IRI.role)
+    const structure = assocStructure.get(id) ?? null
+    if (type === 'calculation') {
+      calcAssociations.push({
+        parent,
+        child,
+        weight: toNumber(firstValue(id, IRI.weight)) ?? 1,
+        order,
+        role,
+        structure,
+      })
+    } else if (type === 'presentation') {
+      presAssociations.push({ parent, child, order, role, structure })
+    }
+  }
+
+  // ── Report IRI / id (from the named-graph names) ──
+  let reportIri: string | null = null
+  for (const graph of store.getGraphs(null, null, null)) {
+    const hash = graph.value.indexOf('#')
+    if (hash > 0) {
+      reportIri = graph.value.slice(0, hash)
+      break
+    }
+  }
+  const reportId = reportIri ? (reportIri.split('/').pop() ?? null) : null
+
+  return {
+    reportId,
+    reportIri,
+    entity,
+    informationBlocks,
+    structures,
+    facts,
+    elements,
+    periods,
+    units,
+    calcAssociations,
+    presAssociations,
+  }
+}
+
+/** A `ReportAdapter` over an in-memory `holon.trig` document. */
+export function trigFileAdapter(trig: string, source = 'holon.trig'): ReportAdapter {
+  return {
+    source,
+    load: async () => parseTrig(trig),
+  }
+}

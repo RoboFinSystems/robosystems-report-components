@@ -1,0 +1,69 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - 'release/**'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if already published
+        id: check-published
+        run: |
+          # Check if this version is already published to npm
+          if npm view @robosystems/report-components@${{ steps.version.outputs.version }} version 2>/dev/null; then
+            echo "already_published=true" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.version.outputs.version }} is already published"
+          else
+            echo "already_published=false" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.version.outputs.version }} is not yet published"
+          fi
+
+      - name: Setup Node.js
+        if: steps.check-published.outputs.already_published == 'false'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        if: steps.check-published.outputs.already_published == 'false'
+        run: npm install
+
+      - name: Build
+        if: steps.check-published.outputs.already_published == 'false'
+        run: npm run build
+
+      - name: Publish to npm
+        if: steps.check-published.outputs.already_published == 'false'
+        run: npm publish --provenance --access public
+
+      - name: Create summary
+        if: steps.check-published.outputs.already_published == 'false'
+        run: |
+          echo "## 📦 Published to npm" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Package:** [@robosystems/report-components](https://www.npmjs.com/package/@robosystems/report-components)" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm install @robosystems/report-components@${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
