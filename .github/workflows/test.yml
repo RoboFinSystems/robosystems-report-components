@@ -46,3 +46,14 @@ jobs:
           test -f README.md || { echo "Missing README.md"; exit 1; }
           test -f LICENSE || { echo "Missing LICENSE"; exit 1; }
           echo "✅ Package structure validated"
+
+      - name: Verify dist loads under Node ESM
+        # The unit tests run against src/; this guards the *built* dist against
+        # invalid ESM (e.g. extensionless relative imports), which a bundler
+        # tolerates but Node / vitest / Next.js consumers reject.
+        run: |
+          node --input-type=module -e "
+            await import('./dist/index.js');
+            await import('./dist/adapters/index.js');
+            console.log('✅ dist resolves under Node ESM');
+          "
