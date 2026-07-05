@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), its `holon.trig` RDF export, a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
+A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
 
 React and react-dom are peer dependencies, and the components are plain React (no framework-specific imports) so the same package feeds a Next.js app or a lightweight Vite app.
 
@@ -14,7 +14,7 @@ npm install @robosystems/report-components
 
 ## Usage
 
-Render a statement by feeding `ReportView` a normalized report model produced by an adapter. The package ships read-only reference adapters under `@robosystems/report-components/adapters`: `parseJsonld` (the canonical `holon.jsonld`, via the `jsonld` processor), `parseTrig` (the `holon.trig` RDF export, via N3.js), and `cypherAdapter` (a live graph over GraphQL).
+Render a statement by feeding `ReportView` a normalized report model produced by an adapter. The package ships read-only reference adapters under `@robosystems/report-components/adapters`: `parseJsonld` (the canonical `holon.jsonld`, via the `jsonld` processor) and `cypherAdapter` (a live graph over GraphQL).
 
 ```tsx
 import { ReportView } from '@robosystems/report-components'
