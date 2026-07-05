@@ -1,13 +1,14 @@
 /**
- * The `holon.trig` file adapter — offline, no backend, no auth.
+ * The shared quad-store → `NormalizedReport` traversal.
  *
- * Parses TriG (three named graphs: `#scene`, `#boundary`, `#projection`) with
- * N3.js into a quad store, then traverses the store to emit a `NormalizedReport`.
- * The three graphs are queried as a union (graph = `null`) — exactly the join
- * the DataBook converter does on the flat graph. No SPARQL engine is required;
- * only store traversal.
+ * An adapter fills an N3 quad `Store` from its source, then hands it here. The
+ * store is read as a **union** across its graphs (`graph = null`) — the
+ * scene/boundary/projection partition is a publication concern, not a rendering
+ * one, so the join is identical however the quads arrived (a dataset-form
+ * JSON-LD holon, a flat graph, …). No SPARQL engine is required; only store
+ * traversal. The only per-source code is how the store gets filled.
  */
-import { DataFactory, Parser, Store } from 'n3'
+import { DataFactory, Store } from 'n3'
 import { IRI, humanize, qname } from '../constants'
 import type {
   CalcAssociation,
@@ -22,7 +23,6 @@ import type {
   StructureInfo,
   UnitInfo,
 } from '../model'
-import type { ReportAdapter } from './types'
 
 const { namedNode } = DataFactory
 
@@ -43,15 +43,7 @@ function toNumber(raw: string | null): number | null {
   return Number.isNaN(n) ? null : n
 }
 
-/**
- * Traverse a populated quad `Store` into the normalized report model.
- *
- * The store is read as a **union** across its graphs (`graph = null`) — the
- * scene/boundary/projection partition is a publication concern, not a rendering
- * one, so the join is identical whether the quads arrived from a TriG holon, a
- * dataset-form JSON-LD holon, or a flat graph. Shared by `parseTrig` and
- * `parseJsonld`; the only per-syntax code is how the store gets filled.
- */
+/** Traverse a populated quad `Store` into the normalized report model. */
 export function parseStore(store: Store): NormalizedReport {
   const { objects, firstValue, subjectsOfType } = makeReaders(store)
 
@@ -183,8 +175,8 @@ export function parseStore(store: Store): NormalizedReport {
 
   // ── Report IRI / id ──
   // Prefer the named-graph name (`<report>#scene` → `<report>`) — present in a
-  // holon (TriG or dataset-form JSON-LD). Fall back to the `rs:Report` subject
-  // so a flat, single-graph document still resolves its identity.
+  // dataset-form holon. Fall back to the `rs:Report` subject so a flat,
+  // single-graph document still resolves its identity.
   let reportIri: string | null = null
   for (const graph of store.getGraphs(null, null, null)) {
     const hash = graph.value.indexOf('#')
@@ -211,20 +203,5 @@ export function parseStore(store: Store): NormalizedReport {
     units,
     calcAssociations,
     presAssociations,
-  }
-}
-
-/** Parse a `holon.trig` document into the normalized report model. */
-export function parseTrig(trig: string): NormalizedReport {
-  const parser = new Parser({ format: 'application/trig' })
-  const store = new Store(parser.parse(trig))
-  return parseStore(store)
-}
-
-/** A `ReportAdapter` over an in-memory `holon.trig` document. */
-export function trigFileAdapter(trig: string, source = 'holon.trig'): ReportAdapter {
-  return {
-    source,
-    load: async () => parseTrig(trig),
   }
 }

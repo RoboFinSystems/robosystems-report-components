@@ -4,9 +4,9 @@
  * Render XBRL-grade financial statements from any source behind a thin adapter:
  *
  *   import { ReportView } from '@robosystems/report-components'
- *   import { trigFileAdapter } from '@robosystems/report-components/adapters'
+ *   import { parseJsonld } from '@robosystems/report-components/adapters'
  *
- *   const report = await trigFileAdapter(trigText).load()
+ *   const report = await parseJsonld(holonText)
  *   <ReportView report={report} />
  */
 
@@ -28,5 +28,5 @@ export type { StatementTableProps } from './components/StatementTable'
 export { cypherAdapter } from './adapters/cypher'
 export type { CypherAdapterConfig } from './adapters/cypher'
 export { jsonldFileAdapter, parseJsonld } from './adapters/jsonld'
-export { parseStore, parseTrig, trigFileAdapter } from './adapters/trig'
+export { parseStore } from './adapters/store'
 export type { ReportAdapter } from './adapters/types'

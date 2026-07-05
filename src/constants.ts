@@ -1,7 +1,7 @@
 /**
  * RDF vocabulary and display helpers shared across adapters and projection.
  *
- * A `holon.trig` mixes several vocabularies: `rs:` for structure, `skos:` for
+ * A report holon mixes several vocabularies: `rs:` for structure, `skos:` for
  * human labels, and the XBRL family (`xlink:` / `xbrli:` / `link:`) for the
  * networks. These constants are the single source of truth for the full IRIs.
  */

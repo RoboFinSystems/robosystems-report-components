@@ -1,7 +1,7 @@
 /**
  * The normalized report model — the load-bearing seam of the library.
  *
- * An **adapter** turns its source (a `holon.trig` file, a cypher endpoint, a
+ * An **adapter** turns its source (a `holon.jsonld` file, a cypher endpoint, a
  * live ledger) into a `NormalizedReport`: the raw facts, Information Blocks,
  * elements / periods / units / entity, and the calculation + presentation
  * association networks. Nothing more.

@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { parseTrig } from '../src/adapters/trig'
+import { parseJsonld } from '../src/adapters/jsonld'
 import type { Statement } from '../src/model'
 import { buildStatements, calcSubtotals, footCheck } from '../src/project'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const trig = readFileSync(join(here, 'fixtures', 'seattle-method-case-1.holon.trig'), 'utf8')
+const holon = readFileSync(join(here, 'fixtures', 'seattle-method-case-1.holon.jsonld'), 'utf8')
 
-const report = parseTrig(trig)
+const report = await parseJsonld(holon)
 const statements = buildStatements(report)
 
 function statementOf(blockType: string): Statement {
@@ -30,7 +30,7 @@ function valueOf(statement: Statement, qname: string, col = latestCol(statement)
   return row ? (row.cells[col]?.value ?? null) : null
 }
 
-describe('trig adapter — parse', () => {
+describe('jsonld adapter — parse', () => {
   it('parses the entity', () => {
     expect(report.entity?.name).toBe('Lemonade Stand (Charlie Hoffman Test Case 1)')
   })

@@ -1,5 +1,5 @@
 export { cypherAdapter } from './cypher'
 export type { CypherAdapterConfig } from './cypher'
 export { jsonldFileAdapter, parseJsonld } from './jsonld'
-export { parseStore, parseTrig, trigFileAdapter } from './trig'
+export { parseStore } from './store'
 export type { ReportAdapter } from './types'
