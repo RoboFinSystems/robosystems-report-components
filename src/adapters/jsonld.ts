@@ -3,19 +3,19 @@
  *
  * The canonical, API-native holon: **dataset-form JSON-LD** carrying the three
  * named graphs (`#scene`, `#boundary`, `#projection`) as `@id` + nested
- * `@graph`. JSON is native to the RoboSystems JSON API, so this is the default
- * export; TriG remains an optional RDF export handled by `trig.ts`.
+ * `@graph`. JSON is native to the RoboSystems JSON API, so this is the one
+ * holon file format.
  *
- * N3.js parses TriG/N-Quads but not JSON-LD, so this adapter uses the `jsonld`
- * processor to expand the document to N-Quads (which preserves the named-graph
- * labels), parses those into the same N3 quad `Store`, and delegates to the
- * shared `parseStore` traversal — identical to the trig path from there on.
+ * N3.js doesn't parse JSON-LD, so this adapter uses the `jsonld` processor to
+ * expand the document to N-Quads (which preserves the named-graph labels),
+ * parses those into an N3 quad `Store`, and delegates to the shared
+ * `parseStore` traversal (`store.ts`).
  */
 import type { JsonLdDocument } from 'jsonld'
 import jsonld from 'jsonld'
 import { Parser, Store } from 'n3'
 import type { NormalizedReport } from '../model'
-import { parseStore } from './trig'
+import { parseStore } from './store'
 import type { ReportAdapter } from './types'
 
 /** Parse a `holon.jsonld` document (string or parsed object) into the model. */
