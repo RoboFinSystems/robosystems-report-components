@@ -51,11 +51,13 @@
     "react-dom": ">=18"
   },
   "dependencies": {
+    "jsonld": "^9.0.0",
     "n3": "^1.26.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@testing-library/react": "^16.3.0",
+    "@types/jsonld": "^1.5.15",
     "@types/n3": "^1.26.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.1.9",
