@@ -2,27 +2,24 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Generate SDK",
+      "label": "Build",
       "type": "shell",
-      "command": "ROBOSYSTEMS_API_URL=${input:apiUrl} npm run generate",
-      "problemMatcher": []
-    },
-    {
-      "label": "Install Dependencies",
-      "type": "shell",
-      "command": "npm install",
-      "problemMatcher": []
-    },
-    {
-      "label": "Update Dependencies",
-      "type": "shell",
-      "command": "npm update",
+      "command": "npm run build",
+      "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     },
     {
       "label": "Test",
       "type": "shell",
       "command": "npm run test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Watch",
+      "type": "shell",
+      "command": "npm run test:watch",
+      "isBackground": true,
       "problemMatcher": []
     },
     {
@@ -53,6 +50,18 @@
       "label": "Type Check",
       "type": "shell",
       "command": "npm run typecheck",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "Update Dependencies",
+      "type": "shell",
+      "command": "npm update",
       "problemMatcher": []
     },
     {
@@ -108,12 +117,6 @@
       "description": "Update dependencies after creating branch:",
       "default": "no",
       "options": ["yes", "no"]
-    },
-    {
-      "id": "apiUrl",
-      "type": "promptString",
-      "description": "Enter API URL for SDK generation:",
-      "default": "http://localhost:8000/openapi.json"
     }
   ]
 }
