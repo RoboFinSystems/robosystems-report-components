@@ -27,5 +27,6 @@ export type { StatementTableProps } from './components/StatementTable'
 // Adapters (also available at the `/adapters` subpath)
 export { cypherAdapter } from './adapters/cypher'
 export type { CypherAdapterConfig } from './adapters/cypher'
-export { parseTrig, trigFileAdapter } from './adapters/trig'
+export { jsonldFileAdapter, parseJsonld } from './adapters/jsonld'
+export { parseStore, parseTrig, trigFileAdapter } from './adapters/trig'
 export type { ReportAdapter } from './adapters/types'

@@ -43,10 +43,16 @@ function toNumber(raw: string | null): number | null {
   return Number.isNaN(n) ? null : n
 }
 
-/** Parse a `holon.trig` document into the normalized report model. */
-export function parseTrig(trig: string): NormalizedReport {
-  const parser = new Parser({ format: 'application/trig' })
-  const store = new Store(parser.parse(trig))
+/**
+ * Traverse a populated quad `Store` into the normalized report model.
+ *
+ * The store is read as a **union** across its graphs (`graph = null`) — the
+ * scene/boundary/projection partition is a publication concern, not a rendering
+ * one, so the join is identical whether the quads arrived from a TriG holon, a
+ * dataset-form JSON-LD holon, or a flat graph. Shared by `parseTrig` and
+ * `parseJsonld`; the only per-syntax code is how the store gets filled.
+ */
+export function parseStore(store: Store): NormalizedReport {
   const { objects, firstValue, subjectsOfType } = makeReaders(store)
 
   // ── Elements ──
@@ -175,7 +181,10 @@ export function parseTrig(trig: string): NormalizedReport {
     }
   }
 
-  // ── Report IRI / id (from the named-graph names) ──
+  // ── Report IRI / id ──
+  // Prefer the named-graph name (`<report>#scene` → `<report>`) — present in a
+  // holon (TriG or dataset-form JSON-LD). Fall back to the `rs:Report` subject
+  // so a flat, single-graph document still resolves its identity.
   let reportIri: string | null = null
   for (const graph of store.getGraphs(null, null, null)) {
     const hash = graph.value.indexOf('#')
@@ -183,6 +192,10 @@ export function parseTrig(trig: string): NormalizedReport {
       reportIri = graph.value.slice(0, hash)
       break
     }
+  }
+  if (!reportIri) {
+    const reports = subjectsOfType(IRI.Report)
+    reportIri = reports.length ? reports[0] : null
   }
   const reportId = reportIri ? (reportIri.split('/').pop() ?? null) : null
 
@@ -199,6 +212,13 @@ export function parseTrig(trig: string): NormalizedReport {
     calcAssociations,
     presAssociations,
   }
+}
+
+/** Parse a `holon.trig` document into the normalized report model. */
+export function parseTrig(trig: string): NormalizedReport {
+  const parser = new Parser({ format: 'application/trig' })
+  const store = new Store(parser.parse(trig))
+  return parseStore(store)
 }
 
 /** A `ReportAdapter` over an in-memory `holon.trig` document. */

@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a live general ledger, a graph database (entity graph or the SEC repository), or a static `holon.trig` file — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
+A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), its `holon.trig` RDF export, a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
 
 React and react-dom are peer dependencies, and the components are plain React (no framework-specific imports) so the same package feeds a Next.js app or a lightweight Vite app.
 
@@ -14,17 +14,17 @@ npm install @robosystems/report-components
 
 ## Usage
 
-Render a statement by feeding a component a normalized report model produced by an adapter. The package ships two read-only reference adapters (a `holon.trig` file adapter via N3.js, and a cypher/GraphQL adapter) under `@robosystems/report-components/adapters`:
+Render a statement by feeding `ReportView` a normalized report model produced by an adapter. The package ships read-only reference adapters under `@robosystems/report-components/adapters`: `parseJsonld` (the canonical `holon.jsonld`, via the `jsonld` processor), `parseTrig` (the `holon.trig` RDF export, via N3.js), and `cypherAdapter` (a live graph over GraphQL).
 
 ```tsx
-import { FinancialStatement } from '@robosystems/report-components'
-import { createTrigFileAdapter } from '@robosystems/report-components/adapters'
+import { ReportView } from '@robosystems/report-components'
+import { parseJsonld } from '@robosystems/report-components/adapters'
 
-const adapter = createTrigFileAdapter({ source: trigText })
-const report = await adapter.load()
+// `holonText` is a report's dataset-form holon.jsonld (scene / boundary / projection)
+const report = await parseJsonld(holonText)
 
 export function Report() {
-  return <FinancialStatement report={report} />
+  return <ReportView report={report} />
 }
 ```
 

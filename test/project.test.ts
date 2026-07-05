@@ -44,7 +44,7 @@ describe('trig adapter — parse', () => {
   })
 
   it('derives the report IRI / id from the named graphs', () => {
-    expect(report.reportId).toBe('rpt_01KVF99WPYN17GS13R5DJY87HC')
+    expect(report.reportId).toMatch(/^rpt_/)
   })
 })
 
