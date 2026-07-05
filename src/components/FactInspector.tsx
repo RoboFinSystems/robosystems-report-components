@@ -122,7 +122,11 @@ export function FactInspector({
 
       <div style={styles.grid}>
         <Field k="Value">
-          <span style={styles.mono}>{formatMoney(cell.value, { currencySymbol: sym })}</span>
+          {cell.value === null && cell.textValue ? (
+            <span>{cell.textValue}</span>
+          ) : (
+            <span style={styles.mono}>{formatMoney(cell.value, { currencySymbol: sym })}</span>
+          )}
         </Field>
         <Field k="Period">
           {formatPeriod(column.period)} <span style={styles.key}>({column.period.type})</span>

@@ -1,0 +1,835 @@
+{
+  "ms": 680.489,
+  "row_count": 92,
+  "error": null,
+  "data": [
+    {
+      "sid": "bfa235c1-1292-50b3-95a0-5f791e12b9ba",
+      "canonical_type": null,
+      "definition": "0000001 - Document - Cover Page",
+      "number": "0000001",
+      "factsets": [
+        "019cf2c9-f6c5-7e47-b351-62c1a609cf23"
+      ]
+    },
+    {
+      "sid": "2b9076f0-62b2-5f06-ac9c-ed1182369c8f",
+      "canonical_type": null,
+      "definition": "0000002 - Document - Audit Information",
+      "number": "0000002",
+      "factsets": [
+        "019cf2c9-f6ae-717a-b2c5-433240243483"
+      ]
+    },
+    {
+      "sid": "83b8dd08-7a18-50d5-a752-b2c1d3665622",
+      "canonical_type": "income_statement",
+      "definition": "9952151 - Statement - Consolidated Statements of Income",
+      "number": "9952151",
+      "factsets": [
+        "019cf2c9-f6b2-78e4-b0d5-53ea6adf137c"
+      ]
+    },
+    {
+      "sid": "2c9d08f3-3b1c-5f38-b1dc-1a3fc17a14ae",
+      "canonical_type": "comprehensive_income",
+      "definition": "9952152 - Statement - Consolidated Statements of Comprehensive Income",
+      "number": "9952152",
+      "factsets": [
+        "019cf2c9-f696-75dd-9f01-f7f791d04b28"
+      ]
+    },
+    {
+      "sid": "3366c03b-766d-5df3-be26-26dfb14ae08d",
+      "canonical_type": "balance_sheet",
+      "definition": "9952153 - Statement - Consolidated Balance Sheets",
+      "number": "9952153",
+      "factsets": [
+        "019cf2c9-f694-77b4-a0a9-8a873ddcf9d8"
+      ]
+    },
+    {
+      "sid": "67e8f794-87ab-5629-a06c-765808bca702",
+      "canonical_type": "balance_sheet",
+      "definition": "9952154 - Statement - Consolidated Balance Sheets (Parenthetical)",
+      "number": "9952154",
+      "factsets": [
+        "019cf2c9-f6b1-7b81-bdc8-8a3e02e7e62c"
+      ]
+    },
+    {
+      "sid": "9373779c-4324-5eb0-9169-40e201e3a2b0",
+      "canonical_type": "equity_statement",
+      "definition": "9952155 - Statement - Consolidated Statements of Shareholders' Equity",
+      "number": "9952155",
+      "factsets": [
+        "019cf2c9-f686-7698-a0d1-0d341970ad3f"
+      ]
+    },
+    {
+      "sid": "96c7ada8-575d-587d-813c-a29d590fa68a",
+      "canonical_type": "equity_statement",
+      "definition": "9952156 - Statement - Consolidated Statements of Shareholders' Equity (Parenthetical)",
+      "number": "9952156",
+      "factsets": [
+        "019cf2c9-f6b3-7c86-9162-2ff52d521ddd"
+      ]
+    },
+    {
+      "sid": "6a7b7bd3-6c7f-5fea-b7bf-6677394122f2",
+      "canonical_type": "cash_flow_statement",
+      "definition": "9952157 - Statement - Consolidated Statements of Cash Flows",
+      "number": "9952157",
+      "factsets": [
+        "019cf2c9-f695-772c-a51a-14aa1211803a"
+      ]
+    },
+    {
+      "sid": "9030f067-0037-5d92-a851-2d8d801cb501",
+      "canonical_type": null,
+      "definition": "9952158 - Disclosure - Organization and Summary of Significant Accounting Policies",
+      "number": "9952158",
+      "factsets": [
+        "019cf2c9-f6b9-7a83-bc0b-e0acfefe90ac"
+      ]
+    },
+    {
+      "sid": "efc57153-c592-52b1-b66e-5a1c4a9a91c0",
+      "canonical_type": null,
+      "definition": "9952159 - Disclosure - Groq",
+      "number": "9952159",
+      "factsets": [
+        "019cf2c9-f6c8-7ed2-acdd-707c3cf5a5ee"
+      ]
+    },
+    {
+      "sid": "9b29ad74-3636-5246-b6be-6fd01afd608d",
+      "canonical_type": null,
+      "definition": "9952160 - Disclosure - Stock-Based Compensation",
+      "number": "9952160",
+      "factsets": [
+        "019cf2c9-f6e0-70b4-ba50-c4eab5f350d6"
+      ]
+    },
+    {
+      "sid": "d731f0e1-c04e-50a7-87f3-3b2c68b36b9a",
+      "canonical_type": null,
+      "definition": "9952161 - Disclosure - Net Income Per Share",
+      "number": "9952161",
+      "factsets": [
+        "019cf2c9-f6dc-72c5-a4e2-1fd7cd4f2f48"
+      ]
+    },
+    {
+      "sid": "204422c7-ce2e-55b2-b8c3-138c2d33cce2",
+      "canonical_type": null,
+      "definition": "9952162 - Disclosure - Goodwill",
+      "number": "9952162",
+      "factsets": [
+        "019cf2c9-f6d9-7844-8a37-aca73b0f9c78"
+      ]
+    },
+    {
+      "sid": "db604329-778b-5a5c-b235-79041ef4915c",
+      "canonical_type": null,
+      "definition": "9952163 - Disclosure - Amortizable Intangible Assets",
+      "number": "9952163",
+      "factsets": [
+        "019cf2c9-f6ad-78df-a66c-8ee4790dfde7"
+      ]
+    },
+    {
+      "sid": "f212f6b6-0bd5-5de7-9be1-d0c56bcee262",
+      "canonical_type": null,
+      "definition": "9952164 - Disclosure - Cash Equivalents and Marketable Securities",
+      "number": "9952164",
+      "factsets": [
+        "019cf2c9-f690-784d-a590-65dee72e264c"
+      ]
+    },
+    {
+      "sid": "ce35c0ec-ecbd-5837-82b8-db112bfad578",
+      "canonical_type": null,
+      "definition": "9952165 - Disclosure - Non-marketable Equity Securities",
+      "number": "9952165",
+      "factsets": [
+        "019cf2c9-f6cc-774e-a88b-5447d98baa30"
+      ]
+    },
+    {
+      "sid": "18955d07-71d4-5f96-905f-c71b15c5bab0",
+      "canonical_type": null,
+      "definition": "9952166 - Disclosure - Balance Sheet Components",
+      "number": "9952166",
+      "factsets": [
+        "019cf2c9-f6af-7fae-8dd1-ab512a198ae1"
+      ]
+    },
+    {
+      "sid": "218f08c6-487f-5ded-84af-ff1dd0c1dbe0",
+      "canonical_type": null,
+      "definition": "9952167 - Disclosure - Derivative Financial Instruments",
+      "number": "9952167",
+      "factsets": [
+        "019cf2c9-f697-7d47-b85d-e3ecec44f3f1"
+      ]
+    },
+    {
+      "sid": "e86ef1a5-0e58-5c77-bd66-2ea4215ae092",
+      "canonical_type": null,
+      "definition": "9952168 - Disclosure - Debt",
+      "number": "9952168",
+      "factsets": [
+        "019cf2c9-f6c6-7cf6-b77d-499665d960e7"
+      ]
+    },
+    {
+      "sid": "6da81f30-676a-5169-95bc-28f514c21bc6",
+      "canonical_type": null,
+      "definition": "9952169 - Disclosure - Commitments and Contingencies",
+      "number": "9952169",
+      "factsets": [
+        "019cf2c9-f6d8-7a21-ae4b-f70aa7fe8ff3"
+      ]
+    },
+    {
+      "sid": "57e947b2-b879-5bfa-b517-1c92e3b9d0b5",
+      "canonical_type": null,
+      "definition": "9952170 - Disclosure - Income Taxes",
+      "number": "9952170",
+      "factsets": [
+        "019cf2c9-f6da-784a-a647-a6e9d7c08f27"
+      ]
+    },
+    {
+      "sid": "ebc119f1-7fbd-5a40-9685-658b2ab03aea",
+      "canonical_type": null,
+      "definition": "9952171 - Disclosure - Shareholders’ Equity",
+      "number": "9952171",
+      "factsets": [
+        "019cf2c9-f6a0-709c-8853-4ec85bf84165"
+      ]
+    },
+    {
+      "sid": "6ec288e7-d7ba-57af-a320-a76af3f2c0a8",
+      "canonical_type": null,
+      "definition": "9952172 - Disclosure - Employee Retirement Plans",
+      "number": "9952172",
+      "factsets": [
+        "019cf2c9-f698-7722-a26c-a339d1794ed8"
+      ]
+    },
+    {
+      "sid": "f65957c2-b065-58e8-8fc1-0d8d1340e033",
+      "canonical_type": null,
+      "definition": "9952173 - Disclosure - Segment Information",
+      "number": "9952173",
+      "factsets": [
+        "019cf2c9-f69f-76e1-a195-9914a0eede2c"
+      ]
+    },
+    {
+      "sid": "8738cea7-a21b-5e9c-86b4-293b9ca4fdf8",
+      "canonical_type": null,
+      "definition": "9952174 - Disclosure - Leases",
+      "number": "9952174",
+      "factsets": [
+        "019cf2c9-f6b7-7a19-876a-0de1ae048642"
+      ]
+    },
+    {
+      "sid": "3136fb01-caad-596b-9ac0-b2a0ee2857d0",
+      "canonical_type": null,
+      "definition": "9952175 - Disclosure - Schedule II - Valuation and Qualifying Accounts",
+      "number": "9952175",
+      "factsets": [
+        "019cf2c9-f6cd-7bab-9cf9-97e792d0b9e4"
+      ]
+    },
+    {
+      "sid": "7e66dcd5-6609-5540-a211-6e5a064fcdc9",
+      "canonical_type": null,
+      "definition": "995412 - Document - Pay vs Performance Table",
+      "number": "995412",
+      "factsets": [
+        "019cf2c9-f68e-7595-a79f-5ad503fc217d"
+      ]
+    },
+    {
+      "sid": "265fcf3e-c380-513c-89b3-c62730dfcc29",
+      "canonical_type": null,
+      "definition": "995445 - Disclosure - Insider Trading Arrangements",
+      "number": "995445",
+      "factsets": [
+        "019cf2c9-f6cf-7dd2-9c9c-d1b956a23866"
+      ]
+    },
+    {
+      "sid": "3584cfc2-5db6-5aa1-85c0-ab53bb31275f",
+      "canonical_type": null,
+      "definition": "995446 - Document - Insider Trading Arrangements, by Individual",
+      "number": "995446",
+      "factsets": [
+        "019cf2c9-f68d-76cf-9f11-e4a50d329fde"
+      ]
+    },
+    {
+      "sid": "fc8ee9e8-c808-54a1-98e7-4ad2b2da4d25",
+      "canonical_type": null,
+      "definition": "995447 - Disclosure - Insider Trading Policies and Procedures",
+      "number": "995447",
+      "factsets": [
+        "019cf2c9-f6ac-72c3-ac9c-026854021288"
+      ]
+    },
+    {
+      "sid": "2dfad75b-b2a7-555a-a598-f54bfad7117b",
+      "canonical_type": null,
+      "definition": "995550 - Disclosure - Cybersecurity Risk Management and Strategy Disclosure",
+      "number": "995550",
+      "factsets": [
+        "019cf2c9-f6ab-7349-8c57-248a7c3900c3"
+      ]
+    },
+    {
+      "sid": "91184614-bcdb-5e5a-be03-c4cdb06d613c",
+      "canonical_type": null,
+      "definition": "9955511 - Disclosure - Organization and Summary of Significant Accounting Policies (Policies)",
+      "number": "9955511",
+      "factsets": [
+        "019cf2c9-f69e-77b9-ae93-6cc97610461d"
+      ]
+    },
+    {
+      "sid": "1751ab81-bfc9-5f1c-b284-73bc6ca69b7e",
+      "canonical_type": null,
+      "definition": "9955512 - Disclosure - Stock-Based Compensation (Tables)",
+      "number": "9955512",
+      "factsets": [
+        "019cf2c9-f6ce-7f2c-8078-2046badbc30f"
+      ]
+    },
+    {
+      "sid": "ebb41fbb-17a9-5ba9-9d5d-0a6424413c4f",
+      "canonical_type": null,
+      "definition": "9955513 - Disclosure - Net Income Per Share (Tables)",
+      "number": "9955513",
+      "factsets": [
+        "019cf2c9-f6dd-7881-b4a7-c740381bf3ca"
+      ]
+    },
+    {
+      "sid": "c72a3a27-5135-583a-90ec-559ac91b1e4a",
+      "canonical_type": null,
+      "definition": "9955514 - Disclosure - Amortizable Intangible Assets (Tables)",
+      "number": "9955514",
+      "factsets": [
+        "019cf2c9-f6d4-7db4-b597-967229a68a42"
+      ]
+    },
+    {
+      "sid": "cc11bc99-d00a-548f-a50b-3e6b7355e4f9",
+      "canonical_type": null,
+      "definition": "9955515 - Disclosure - Cash Equivalents and Marketable Securities (Tables)",
+      "number": "9955515",
+      "factsets": [
+        "019cf2c9-f691-7cd0-9e8f-5f1a205328dd"
+      ]
+    },
+    {
+      "sid": "8e64c92b-534e-55d1-93eb-baed32b3cfe9",
+      "canonical_type": null,
+      "definition": "9955516 - Disclosure - Non-marketable Equity Securities (Tables)",
+      "number": "9955516",
+      "factsets": [
+        "019cf2c9-f6b8-7a4a-b3a2-d5b984baebdc"
+      ]
+    },
+    {
+      "sid": "cb25a7e0-c2dc-5d11-b0e1-bc540bdcf3e1",
+      "canonical_type": null,
+      "definition": "9955517 - Disclosure - Balance Sheet Components (Tables)",
+      "number": "9955517",
+      "factsets": [
+        "019cf2c9-f6d6-7fc7-91a4-80e0d30090d9"
+      ]
+    },
+    {
+      "sid": "49242bbc-6950-5118-9424-a23c1b4ec9a3",
+      "canonical_type": null,
+      "definition": "9955518 - Disclosure - Derivative Financial Instruments (Tables)",
+      "number": "9955518",
+      "factsets": [
+        "019cf2c9-f6c7-7074-97bf-d67de6fe4ae7"
+      ]
+    },
+    {
+      "sid": "d3e1a95e-bd56-537a-bab5-99e5a8cee24e",
+      "canonical_type": null,
+      "definition": "9955519 - Disclosure - Debt (Tables)",
+      "number": "9955519",
+      "factsets": [
+        "019cf2c9-f6b4-71ab-8702-32115e56d34a"
+      ]
+    },
+    {
+      "sid": "39e3550a-bda9-5aee-90d7-687574b4bb93",
+      "canonical_type": null,
+      "definition": "9955520 - Disclosure - Commitments and Contingencies (Tables)",
+      "number": "9955520",
+      "factsets": [
+        "019cf2c9-f693-7f89-bdfe-39def020b974"
+      ]
+    },
+    {
+      "sid": "1770fa24-30dd-509c-b3c7-8faf6fc3bbf3",
+      "canonical_type": null,
+      "definition": "9955521 - Disclosure - Income Taxes (Tables)",
+      "number": "9955521",
+      "factsets": [
+        "019cf2c9-f6ca-79e5-8455-99d367118aba"
+      ]
+    },
+    {
+      "sid": "3c52dec1-15c2-58d4-932d-e7d2e2405f55",
+      "canonical_type": null,
+      "definition": "9955522 - Disclosure - Segment Information (Tables)",
+      "number": "9955522",
+      "factsets": [
+        "019cf2c9-f6df-7589-945a-8efe7d920351"
+      ]
+    },
+    {
+      "sid": "df64025b-8647-5b75-a4c7-14cc4f29e32f",
+      "canonical_type": null,
+      "definition": "9955523 - Disclosure - Leases (Tables)",
+      "number": "9955523",
+      "factsets": [
+        "019cf2c9-f6db-7bd1-89a3-e1ba41c08195"
+      ]
+    },
+    {
+      "sid": "156918e2-606b-5f7e-8e43-6dc5b1e5b76f",
+      "canonical_type": null,
+      "definition": "9955525 - Disclosure - Groq - Narrative (Details)",
+      "number": "9955525",
+      "factsets": [
+        "019cf2c9-f6bf-74e5-aed7-ff8631cbe7d9"
+      ]
+    },
+    {
+      "sid": "525dab1b-6917-5cf9-805c-228b8c41e599",
+      "canonical_type": null,
+      "definition": "9955526 - Disclosure - Stock-Based Compensation - Schedule of Stock-Based Compensation Expense (Details)",
+      "number": "9955526",
+      "factsets": [
+        "019cf2c9-f68c-7e6f-b09e-7a7f9d927fa7"
+      ]
+    },
+    {
+      "sid": "b596e49d-85af-597c-b7c8-3c21d0fddf25",
+      "canonical_type": null,
+      "definition": "9955527 - Disclosure - Stock-Based Compensation - Summary of Equity Awards (Details)",
+      "number": "9955527",
+      "factsets": [
+        "019cf2c9-f6c4-76f1-b54e-79bc9bbb5793"
+      ]
+    },
+    {
+      "sid": "bd504572-d7a3-5516-8e2e-8fc852d863a7",
+      "canonical_type": null,
+      "definition": "9955528 - Disclosure - Stock-Based Compensation - Narrative (Details)",
+      "number": "9955528",
+      "factsets": [
+        "019cf2c9-f68b-78ca-901c-97de27e281ec"
+      ]
+    },
+    {
+      "sid": "10ec0dee-8ebb-5eaa-8969-20bf91d9d596",
+      "canonical_type": null,
+      "definition": "9955529 - Disclosure - Stock-Based Compensation - Equity Incentive Plans (Details)",
+      "number": "9955529",
+      "factsets": [
+        "019cf2c9-f6e1-7ab1-a531-c56125854e74"
+      ]
+    },
+    {
+      "sid": "c085a178-9292-5cbc-ad70-2278204db0ba",
+      "canonical_type": "EarningsPerShareDisclosuresHierarchy",
+      "definition": "9955530 - Disclosure - Net Income Per Share (Details)",
+      "number": "9955530",
+      "factsets": [
+        "019cf2c9-f69c-75eb-9c98-fc6818ee118d"
+      ]
+    },
+    {
+      "sid": "7618d2ab-e684-52d2-b16c-957c963a8828",
+      "canonical_type": "GoodwillRollForward",
+      "definition": "9955531 - Disclosure - Goodwill (Details)",
+      "number": "9955531",
+      "factsets": [
+        "019cf2c9-f688-79f5-b966-8491b2fd261b"
+      ]
+    },
+    {
+      "sid": "890ef957-a8a4-5655-a636-f08ded3eadb2",
+      "canonical_type": "FiniteLivedIntangibleAssetsFutureAmortizationExpenseCurrentAndFiveSucceedingFiscalYearsHierarchy",
+      "definition": "9955532 - Disclosure - Amortizable Intangible Assets (Details)",
+      "number": "9955532",
+      "factsets": [
+        "019cf2c9-f683-7c4f-ac07-45446a570e88"
+      ]
+    },
+    {
+      "sid": "4bf6ef4b-5ed2-5d77-a50e-8baf36175b34",
+      "canonical_type": "FiniteLivedIntangibleAssetsFutureAmortizationExpenseCurrentAndFiveSucceedingFiscalYearsHierarchy",
+      "definition": "9955532 - Disclosure - Amortizable Intangible Assets (Details)",
+      "number": "9955532",
+      "factsets": [
+        "019cf2c9-f6e2-7fad-b66c-7dcedfbf20c2"
+      ]
+    },
+    {
+      "sid": "8c00973a-60df-5447-ab40-feb78a29ea0c",
+      "canonical_type": null,
+      "definition": "9955533 - Disclosure - Cash Equivalents and Marketable Securities - Cash Equivalents and Marketable Securities (Details)",
+      "number": "9955533",
+      "factsets": [
+        "019cf2c9-f6ba-7a0c-99fe-bbe72d91b584"
+      ]
+    },
+    {
+      "sid": "600ff2c8-7c19-5519-b2f7-d59964672081",
+      "canonical_type": null,
+      "definition": "9955533 - Disclosure - Cash Equivalents and Marketable Securities - Cash Equivalents and Marketable Securities (Details)",
+      "number": "9955533",
+      "factsets": [
+        "019cf2c9-f6be-7db2-97c5-6b8a0e775146"
+      ]
+    },
+    {
+      "sid": "7fe77d22-dfc6-563c-97c8-037dee3152bf",
+      "canonical_type": null,
+      "definition": "9955535 - Disclosure - Cash Equivalents and Marketable Securities - Unrealized Losses Aggregated by Investment Category (Details)",
+      "number": "9955535",
+      "factsets": [
+        "019cf2c9-f685-7568-8e9f-2ddc77101448"
+      ]
+    },
+    {
+      "sid": "1a76c01b-32a3-55c9-9bd2-b8b3ab0a416b",
+      "canonical_type": null,
+      "definition": "9955536 - Disclosure - Cash Equivalents and Marketable Securities - Estimated Fair Value of Cash Equivalents and Marketable Securities (Details)",
+      "number": "9955536",
+      "factsets": [
+        "019cf2c9-f6d7-72f8-ab46-fe1c3b203afb"
+      ]
+    },
+    {
+      "sid": "c9b17149-da49-5269-b442-edccb0ffe315",
+      "canonical_type": null,
+      "definition": "9955537 - Disclosure - Non-marketable Equity Securities - Carrying Value of Non-marketable Equity Securities (Details)",
+      "number": "9955537",
+      "factsets": [
+        "019cf2c9-f6de-7041-9c0d-0827c19b6a6f"
+      ]
+    },
+    {
+      "sid": "33cee758-a025-52ce-a12f-ddb0d4323a11",
+      "canonical_type": null,
+      "definition": "9955538 - Disclosure - Non-marketable Equity Securities - Narrative (Details)",
+      "number": "9955538",
+      "factsets": [
+        "019cf2c9-f69d-77e7-8232-cb5e1dec211d"
+      ]
+    },
+    {
+      "sid": "888dbf5f-d29a-56aa-b675-856c1d886917",
+      "canonical_type": null,
+      "definition": "9955539 - Disclosure - Balance Sheet Components - Narrative (Details)",
+      "number": "9955539",
+      "factsets": [
+        "019cf2c9-f6bb-7b8a-b26e-6907a96fa2aa"
+      ]
+    },
+    {
+      "sid": "31fdaf61-e8a3-55c8-b4da-bd422303bb6a",
+      "canonical_type": null,
+      "definition": "9955539 - Disclosure - Balance Sheet Components - Narrative (Details)",
+      "number": "9955539",
+      "factsets": [
+        "019cf2c9-f6d0-7eea-b6e8-b4d13daa8a0b"
+      ]
+    },
+    {
+      "sid": "d38e0ac8-55ba-5a39-b47c-e47912405fec",
+      "canonical_type": "InventoryNetRollUp",
+      "definition": "9955540 - Disclosure - Balance Sheet Components - Inventories (Details)",
+      "number": "9955540",
+      "factsets": [
+        "019cf2c9-f6d5-728c-8d2a-74dde4d7127f"
+      ]
+    },
+    {
+      "sid": "4225f572-ab70-558b-b9d8-2861d9d552be",
+      "canonical_type": "PropertyPlantAndEquipmentNetByTypeRollUp",
+      "definition": "9955541 - Disclosure - Balance Sheet Components - Property and Equipment (Details)",
+      "number": "9955541",
+      "factsets": [
+        "019cf2c9-f6bc-7583-a0c0-b67bddd3b006"
+      ]
+    },
+    {
+      "sid": "ab715aa2-3891-5d77-a3cf-de3d924bd513",
+      "canonical_type": null,
+      "definition": "9955542 - Disclosure - Balance Sheet Components - Accrued and Other Current Liabilities (Details)",
+      "number": "9955542",
+      "factsets": [
+        "019cf2c9-f684-7857-9845-79c7fd682374"
+      ]
+    },
+    {
+      "sid": "421d91ed-89c2-5d5c-a9d4-83ecfeedfc91",
+      "canonical_type": "OtherLiabilitiesNoncurrentHierarchy",
+      "definition": "9955543 - Disclosure - Balance Sheet Components - Other Long-Term Liabilities (Details)",
+      "number": "9955543",
+      "factsets": [
+        "019cf2c9-f68f-7bc8-9603-6e48418bcb5a"
+      ]
+    },
+    {
+      "sid": "82bc8dce-c119-5f38-98e7-a143a4164178",
+      "canonical_type": null,
+      "definition": "9955544 - Disclosure - Balance Sheet Components - Deferred Revenue (Details)",
+      "number": "9955544",
+      "factsets": [
+        "019cf2c9-f6b0-760c-96ff-8e717b41ac64"
+      ]
+    },
+    {
+      "sid": "4c8f0a89-3b1d-533b-8eac-d9faa5c6f03b",
+      "canonical_type": null,
+      "definition": "9955545 - Disclosure - Balance Sheet Components - Revenue Remaining Performance Obligation (Details)",
+      "number": "9955545",
+      "factsets": [
+        "019cf2c9-f6a2-71ba-a41b-20076d6d4124"
+      ]
+    },
+    {
+      "sid": "ab648b80-2e8e-5bae-af9a-28be41ace6b7",
+      "canonical_type": null,
+      "definition": "9955545 - Disclosure - Balance Sheet Components - Revenue Remaining Performance Obligation (Details)",
+      "number": "9955545",
+      "factsets": [
+        "019cf2c9-f6bd-79b9-bc75-5edfa62fda3a"
+      ]
+    },
+    {
+      "sid": "c3d91a83-0d19-5d5e-b5a5-ebdb7ab065ad",
+      "canonical_type": "LongTermDebtMaturities",
+      "definition": "9955548 - Disclosure - Debt - Schedule of Debt (Details)",
+      "number": "9955548",
+      "factsets": [
+        "019cf2c9-f6a5-79ce-8949-96ca7b811062"
+      ]
+    },
+    {
+      "sid": "4e34886d-73f5-5ee7-8608-656585ae090a",
+      "canonical_type": "LongTermDebtMaturities",
+      "definition": "9955548 - Disclosure - Debt - Schedule of Debt (Details)",
+      "number": "9955548",
+      "factsets": [
+        "019cf2c9-f6e3-708d-ba92-6f173359f202"
+      ]
+    },
+    {
+      "sid": "b1559c31-9ce3-5225-84ee-7a5fc793ce04",
+      "canonical_type": "LongTermDebtMaturities",
+      "definition": "9955549 - Disclosure - Debt - Narrative (Details)",
+      "number": "9955549",
+      "factsets": [
+        "019cf2c9-f6d1-7ebd-b0cd-490cf92ef6d9"
+      ]
+    },
+    {
+      "sid": "08b35406-5c71-5e90-95a5-e350950a850b",
+      "canonical_type": null,
+      "definition": "9955550 - Disclosure - Commitments and Contingencies - Narrative (Details)",
+      "number": "9955550",
+      "factsets": [
+        "019cf2c9-f6a4-7b48-815a-d29267f8c21c"
+      ]
+    },
+    {
+      "sid": "001da005-f452-525e-8358-7f0a511871a5",
+      "canonical_type": "StandardAndExtendedProductWarrantyMovementRollForward",
+      "definition": "9955551 - Disclosure - Commitments and Contingencies - Schedule of Product Warranty Liabilities (Details)",
+      "number": "9955551",
+      "factsets": [
+        "019cf2c9-f692-78a3-8ab4-6cd2fdb5dc67"
+      ]
+    },
+    {
+      "sid": "15e51765-a3ff-566f-8e9d-1cb0d9bef32e",
+      "canonical_type": "IncomeTaxExpenseBenefitDetails",
+      "definition": "9955552 - Disclosure - Income Taxes - Components of Income Tax Expense (Details)",
+      "number": "9955552",
+      "factsets": [
+        "019cf2c9-f6b6-7e7e-ab60-df40d1bbf130"
+      ]
+    },
+    {
+      "sid": "c0e2a011-4d00-5651-8e69-677718588d17",
+      "canonical_type": "EffectiveIncomeTaxRateContinuingOperationsTaxRateReconciliationRollUp",
+      "definition": "9955553 - Disclosure - Income Taxes - Income Tax Reconciliation (Details)",
+      "number": "9955553",
+      "factsets": [
+        "019cf2c9-f689-734a-bacd-7c5c1c9df3b0"
+      ]
+    },
+    {
+      "sid": "c1ef006a-dc4a-5646-9685-207c30f821f7",
+      "canonical_type": "EffectiveIncomeTaxRateContinuingOperationsTaxRateReconciliationRollUp",
+      "definition": "9955554 - Disclosure - Income Taxes - Income Tax Expense (Benefit) (Details)",
+      "number": "9955554",
+      "factsets": [
+        "019cf2c9-f6c9-7d55-b3c2-4fad12d4e2bb"
+      ]
+    },
+    {
+      "sid": "01739520-ead0-5231-9bdb-1c681f3288fd",
+      "canonical_type": null,
+      "definition": "9955555 - Disclosure - Income Taxes - Income Tax Paid (Details)",
+      "number": "9955555",
+      "factsets": [
+        "019cf2c9-f6c0-773e-9e10-4ad40ba13afe"
+      ]
+    },
+    {
+      "sid": "0886001f-f399-5394-8c81-a7a80bf40eed",
+      "canonical_type": "DeferredTaxAssetsAndLiabilities",
+      "definition": "9955556 - Disclosure - Income Taxes - Deferred Taxes (Details)",
+      "number": "9955556",
+      "factsets": [
+        "019cf2c9-f699-7457-bf78-d474d976ec12"
+      ]
+    },
+    {
+      "sid": "1c0d71fb-67c0-5fea-bf06-272c8a7aa873",
+      "canonical_type": null,
+      "definition": "9955557 - Disclosure - Income Taxes - Narrative (Details)",
+      "number": "9955557",
+      "factsets": [
+        "019cf2c9-f6a7-7261-8ccb-5e1e4250cfc7"
+      ]
+    },
+    {
+      "sid": "dcb7acbb-e54d-590a-869e-91ecfa1336ac",
+      "canonical_type": "UnrecognizedTaxBenefitsExcludingAmountsPertainingToExaminedTaxReturnsRollForward",
+      "definition": "9955558 - Disclosure - Income Taxes - Unrecognized Tax Benefits (Details)",
+      "number": "9955558",
+      "factsets": [
+        "019cf2c9-f69a-77d2-ab2c-933ccb1d36fb"
+      ]
+    },
+    {
+      "sid": "ec56fb41-7651-5270-8cad-f89f65f44c5d",
+      "canonical_type": null,
+      "definition": "9955559 - Disclosure - Shareholders' Equity (Details)",
+      "number": "9955559",
+      "factsets": [
+        "019cf2c9-f6aa-7533-a89c-24d21f3f35e0"
+      ]
+    },
+    {
+      "sid": "d58e9c6c-bd0c-5e8c-a8e0-5429dbc0952c",
+      "canonical_type": null,
+      "definition": "9955560 - Disclosure - Employee Retirement Plans (Details)",
+      "number": "9955560",
+      "factsets": [
+        "019cf2c9-f6b5-7054-a7e3-d4e0853fdd14"
+      ]
+    },
+    {
+      "sid": "35ff417f-1083-500b-9f24-5d34d9163829",
+      "canonical_type": null,
+      "definition": "9955561 - Disclosure - Segment Information - Narrative (Details)",
+      "number": "9955561",
+      "factsets": [
+        "019cf2c9-f6a9-7779-93c4-50fcd4d47ad9"
+      ]
+    },
+    {
+      "sid": "3796dd97-033e-5415-b874-142581c59e36",
+      "canonical_type": "RevenuefromExternalCustomersAttributedToForeignCountriesByGeographicArea",
+      "definition": "9955562 - Disclosure - Segment Information - Reportable Segments (Details)",
+      "number": "9955562",
+      "factsets": [
+        "019cf2c9-f6c2-7b8d-8225-e746dd102456"
+      ]
+    },
+    {
+      "sid": "612ceb47-f697-5cb9-bcd9-3457e5ed8674",
+      "canonical_type": null,
+      "definition": "9955563 - Disclosure - Segment Information - Reconciling Items (Details)",
+      "number": "9955563",
+      "factsets": [
+        "019cf2c9-f6c1-7c86-bbb8-b465364fe045"
+      ]
+    },
+    {
+      "sid": "6e699f70-efe8-5da9-8b0b-ebc24521c47b",
+      "canonical_type": null,
+      "definition": "9955564 - Disclosure - Segment Information - Revenue and Long-lived Assets by Region (Details)",
+      "number": "9955564",
+      "factsets": [
+        "019cf2c9-f6c3-7f5b-ae56-9c89ed7f07b0"
+      ]
+    },
+    {
+      "sid": "44f2c691-d379-5d9b-8536-9625224bf61c",
+      "canonical_type": null,
+      "definition": "9955565 - Disclosure - Segment Information - Schedule of Revenue by Market (Details)",
+      "number": "9955565",
+      "factsets": [
+        "019cf2c9-f68a-722e-82be-355b7e2d475e"
+      ]
+    },
+    {
+      "sid": "351c6a8b-85a5-512d-b291-213b872405d9",
+      "canonical_type": null,
+      "definition": "9955566 - Disclosure - Leases - Schedule of Future Minimum Lease Payments (Details)",
+      "number": "9955566",
+      "factsets": [
+        "019cf2c9-f6a1-72a6-ae65-19a9bc916cf6"
+      ]
+    },
+    {
+      "sid": "67564d42-09de-57a3-b399-492a2c0b0023",
+      "canonical_type": null,
+      "definition": "9955566 - Disclosure - Leases - Schedule of Future Minimum Lease Payments (Details)",
+      "number": "9955566",
+      "factsets": [
+        "019cf2c9-f6cb-721f-b79c-c57133133b9f"
+      ]
+    },
+    {
+      "sid": "f0be3ecb-01aa-511e-a2bd-7b5b22777280",
+      "canonical_type": "RestructuringReserveByTypeOfCost",
+      "definition": "9955567 - Disclosure - Leases - Narrative (Details)",
+      "number": "9955567",
+      "factsets": [
+        "019cf2c9-f6d2-7323-bdfd-cc7d186d0d80"
+      ]
+    },
+    {
+      "sid": "4879ea49-0087-52f4-a760-79c792d9da1d",
+      "canonical_type": null,
+      "definition": "9955568 - Disclosure - Leases - Schedule of other lease information (Details)",
+      "number": "9955568",
+      "factsets": [
+        "019cf2c9-f69b-766d-baa4-416d1db868ca"
+      ]
+    }
+  ]
+}

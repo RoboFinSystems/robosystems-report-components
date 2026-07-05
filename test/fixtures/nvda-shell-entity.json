@@ -1,0 +1,19 @@
+{
+  "ms": 250.77700000000002,
+  "data": [
+    {
+      "entity_id": "65764098-59b4-551a-b316-649aed99755c",
+      "entity_name": "NVIDIA CORP",
+      "legal_name": "NVIDIA CORP",
+      "cik": "0001045810",
+      "ticker": "NVDA",
+      "sic": "Semiconductors & Related Devices",
+      "report_id": "c26ebe09-3d6e-56a8-b086-d297c73e8831",
+      "form": "10-K",
+      "report_date": "2026-01-25",
+      "filing_date": "2026-02-25",
+      "fy": 2026,
+      "fp": "FY"
+    }
+  ]
+}

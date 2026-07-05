@@ -72,6 +72,12 @@ export interface Fact {
   factSet: string | null
   value: number | null
   decimals: string | null
+  /**
+   * Raw string value for non-numeric facts (e.g. a Cover Page's entity name,
+   * or a yes/no flag) — present when `value` is null. Lets text-bearing sections
+   * (the cover, narrative disclosures) render their content instead of a blank.
+   */
+  textValue?: string | null
 }
 
 /** A calculation arc: `parent` (subtotal) rolls up `child * weight`. */
@@ -99,6 +105,12 @@ export interface StructureInfo {
   blockType: string
   roleUri: string | null
   structureName: string | null
+  /**
+   * Filing sequence for ordering sections (SEC `Structure.number`). When present,
+   * `buildStatements` orders by it instead of the canonical `BLOCK_ORDER` — a real
+   * filing has dozens of sections whose order is the filer's, not a fixed four.
+   */
+  order?: number
 }
 
 /** An Information Block — groups a statement's facts via a shared `factSet`. */
@@ -107,6 +119,14 @@ export interface InformationBlock {
   blockType: string
   factSet: string | null
   label: string | null
+  /**
+   * Direct link to the `StructureInfo` that supplies this block's presentation +
+   * calculation networks. When set (SEC adapter), the projection matches block →
+   * structure by this id, so a filing with many structures sharing one `blockType`
+   * (e.g. balance sheet main + parenthetical) resolves each to its own structure.
+   * Left undefined by the holon/file path, which matches by `blockType`.
+   */
+  structureId?: string
 }
 
 /** The full normalized report — the adapter's output and projection's input. */
@@ -140,6 +160,8 @@ export interface StatementColumn {
 export interface RowCell {
   value: number | null
   fact: Fact | null
+  /** Raw string for a non-numeric fact (from `Fact.textValue`), when `value` is null. */
+  textValue?: string | null
 }
 
 /** A rendered statement line. */

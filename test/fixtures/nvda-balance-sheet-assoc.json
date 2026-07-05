@@ -1,0 +1,511 @@
+{
+  "ms": 1548.983,
+  "row_count": 63,
+  "error": null,
+  "data": [
+    {
+      "association_type": "Presentation",
+      "order_value": 5.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "us-gaap:PrepaidExpenseAndOtherAssetsCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "nvda:MarketableSecuritiesAndEquitySecuritiesFVNI"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 6.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "us-gaap:AssetsCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 3.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "us-gaap:AccountsReceivableNetCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 4.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "us-gaap:InventoryNet"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsCurrentAbstract",
+      "child": "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquity",
+      "child": "us-gaap:CommitmentsAndContingencies"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquity",
+      "child": "us-gaap:Liabilities"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquity",
+      "child": "us-gaap:StockholdersEquity"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:LongTermDebtNoncurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:LiabilitiesCurrentAbstract"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 6.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:CommitmentsAndContingencies"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 4.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:OtherLiabilitiesNoncurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 8.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:LiabilitiesAndStockholdersEquity"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 7.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 5.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:Liabilities"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 3.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesAndStockholdersEquityAbstract",
+      "child": "us-gaap:OperatingLeaseLiabilityNoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 5.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:AssetsCurrent",
+      "child": "us-gaap:PrepaidExpenseAndOtherAssetsCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:AssetsCurrent",
+      "child": "nvda:MarketableSecuritiesAndEquitySecuritiesFVNI"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:AssetsCurrent",
+      "child": "us-gaap:AccountsReceivableNetCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 4.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:AssetsCurrent",
+      "child": "us-gaap:InventoryNet"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:AssetsCurrent",
+      "child": "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 5.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:StockholdersEquity",
+      "child": "us-gaap:RetainedEarningsAccumulatedDeficit"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 4.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:StockholdersEquity",
+      "child": "us-gaap:AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:StockholdersEquity",
+      "child": "us-gaap:PreferredStockValueOutstanding"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:StockholdersEquity",
+      "child": "us-gaap:CommonStockValue"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:StockholdersEquity",
+      "child": "us-gaap:AdditionalPaidInCapital"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Liabilities",
+      "child": "us-gaap:LongTermDebtNoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 4.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Liabilities",
+      "child": "us-gaap:OtherLiabilitiesNoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Liabilities",
+      "child": "us-gaap:LiabilitiesCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Liabilities",
+      "child": "us-gaap:OperatingLeaseLiabilityNoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesCurrent",
+      "child": "us-gaap:AccountsPayableCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesCurrent",
+      "child": "us-gaap:AccruedLiabilitiesCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:LiabilitiesCurrent",
+      "child": "us-gaap:DebtCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StatementOfFinancialPositionAbstract",
+      "child": "us-gaap:LiabilitiesAndStockholdersEquityAbstract"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StatementOfFinancialPositionAbstract",
+      "child": "us-gaap:AssetsAbstract"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 1.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:AssetsCurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 6.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:DeferredIncomeTaxAssetsNet"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 2.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:PropertyPlantAndEquipmentNet"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 3.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:OperatingLeaseRightOfUseAsset"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 5.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:IntangibleAssetsNetExcludingGoodwill"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 8.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:OtherAssetsNoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 7.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:EquitySecuritiesFVNINoncurrent"
+    },
+    {
+      "association_type": "Calculation",
+      "order_value": 4.0,
+      "weight": 1.0,
+      "preferred_label": null,
+      "parent": "us-gaap:Assets",
+      "child": "us-gaap:Goodwill"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 5.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:RetainedEarningsAccumulatedDeficit"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 4.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:AccumulatedOtherComprehensiveIncomeLossNetOfTax"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:PreferredStockValueOutstanding"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:CommonStockValue"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 3.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:AdditionalPaidInCapital"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 6.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterestAbstract",
+      "child": "us-gaap:StockholdersEquity"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesCurrentAbstract",
+      "child": "us-gaap:AccountsPayableCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesCurrentAbstract",
+      "child": "us-gaap:AccruedLiabilitiesCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 3.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:LiabilitiesCurrentAbstract",
+      "child": "us-gaap:DebtCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 4.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:LiabilitiesCurrentAbstract",
+      "child": "us-gaap:LiabilitiesCurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 1.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:AssetsCurrentAbstract"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 6.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:DeferredIncomeTaxAssetsNet"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 2.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:PropertyPlantAndEquipmentNet"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 3.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:OperatingLeaseRightOfUseAsset"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 9.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/totalLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:Assets"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 5.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:IntangibleAssetsNetExcludingGoodwill"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 8.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:OtherAssetsNoncurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 7.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:EquitySecuritiesFVNINoncurrent"
+    },
+    {
+      "association_type": "Presentation",
+      "order_value": 4.0,
+      "weight": null,
+      "preferred_label": "http://www.xbrl.org/2003/role/terseLabel",
+      "parent": "us-gaap:AssetsAbstract",
+      "child": "us-gaap:Goodwill"
+    }
+  ]
+}

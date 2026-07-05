@@ -11,12 +11,14 @@
  */
 
 // Model + reconstruction + formatting
-export { BLOCK_ORDER, BLOCK_TITLES, NS, humanize, qname } from './constants'
+export { BLOCK_ORDER, BLOCK_TITLES, NS, humanize, isExternalFactUrl, qname } from './constants'
 export * from './format'
 export * from './model'
 export * from './project'
 
 // Components
+export { ExternalTextBlock } from './components/ExternalTextBlock'
+export type { ExternalTextBlockProps } from './components/ExternalTextBlock'
 export { FactInspector } from './components/FactInspector'
 export type { FactInspectorProps } from './components/FactInspector'
 export { ReportView } from './components/ReportView'
@@ -28,5 +30,12 @@ export type { StatementTableProps } from './components/StatementTable'
 export { cypherAdapter } from './adapters/cypher'
 export type { CypherAdapterConfig } from './adapters/cypher'
 export { jsonldFileAdapter, parseJsonld } from './adapters/jsonld'
+export {
+  fetchSecReportShell,
+  fetchSecSection,
+  mergeSecSections,
+  parseStructureDefinition,
+} from './adapters/sec'
+export type { SecQuery, SecReportShell, SecSection } from './adapters/sec'
 export { parseStore } from './adapters/store'
 export type { ReportAdapter } from './adapters/types'

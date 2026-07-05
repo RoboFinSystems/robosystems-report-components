@@ -4,7 +4,13 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseJsonld } from '../src/adapters/jsonld'
 import type { Statement } from '../src/model'
-import { buildStatements, calcSubtotals, footCheck } from '../src/project'
+import {
+  buildStatements,
+  calcSubtotals,
+  footCheck,
+  reportSections,
+  sliceReportSection,
+} from '../src/project'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const holon = readFileSync(join(here, 'fixtures', 'seattle-method-case-1.holon.jsonld'), 'utf8')
@@ -96,6 +102,35 @@ describe('projection — income statement values', () => {
     expect(valueOf(is, 'rs-gaap:GrossProfit')).toBe(2700)
     expect(valueOf(is, 'rs-gaap:OperatingIncomeLoss')).toBe(2600)
     expect(valueOf(is, 'rs-gaap:NetIncomeLoss')).toBe(2050)
+  })
+})
+
+describe('sections — reportSections + sliceReportSection', () => {
+  it('lists the report sections in canonical order', () => {
+    expect(reportSections(report).map((s) => s.title)).toEqual([
+      'Balance Sheet',
+      'Income Statement',
+      'Cash Flow Statement',
+      'Statement of Changes in Equity',
+    ])
+  })
+
+  it('slices to a single section whose buildStatements yields just that statement', () => {
+    for (const section of reportSections(report)) {
+      const statements = buildStatements(sliceReportSection(report, section.id))
+      expect(statements).toHaveLength(1)
+      expect(statements[0].title).toBe(section.title)
+    }
+  })
+
+  it('the sliced balance sheet still foots (14,450)', () => {
+    const bsId = reportSections(report).find((s) => s.title === 'Balance Sheet')!.id
+    const bs = buildStatements(sliceReportSection(report, bsId))[0]
+    expect(valueOf(bs, 'rs-gaap:Assets')).toBe(14450)
+  })
+
+  it('an unknown section id slices to an empty report', () => {
+    expect(sliceReportSection(report, 'nope').informationBlocks).toHaveLength(0)
   })
 })
 
