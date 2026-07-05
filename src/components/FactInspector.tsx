@@ -34,11 +34,17 @@ const styles: Record<string, CSSProperties> = {
     gap: '1rem',
     marginBottom: '0.75rem',
   },
-  label: { fontSize: '1rem', fontWeight: 700, margin: 0 },
+  // `minWidth: 0` lets this flex child shrink below its content so the long
+  // label / qname wrap inside the panel instead of overflowing it.
+  headerText: { minWidth: 0 },
+  label: { fontSize: '1rem', fontWeight: 700, margin: 0, overflowWrap: 'anywhere' },
   qname: {
+    display: 'block',
     fontFamily: 'var(--rs-font-mono, ui-monospace, monospace)',
     fontSize: '0.8rem',
     color: 'var(--rs-primary-700, #1d4ed8)',
+    // qnames are single unbroken tokens — break anywhere so they don't overflow.
+    overflowWrap: 'anywhere',
   },
   close: {
     border: 'none',
@@ -103,7 +109,7 @@ export function FactInspector({
   return (
     <div style={styles.panel}>
       <div style={styles.header}>
-        <div>
+        <div style={styles.headerText}>
           <p style={styles.label}>{element.label}</p>
           <span style={styles.qname}>{element.qname}</span>
         </div>
