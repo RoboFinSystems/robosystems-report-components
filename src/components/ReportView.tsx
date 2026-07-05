@@ -44,7 +44,6 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     color: 'var(--rs-text, #111827)',
   },
-  entitySub: { fontSize: '0.85rem', color: 'var(--rs-muted, #6b7280)' },
   panel: { position: 'sticky', top: '1rem' },
 }
 
@@ -60,9 +59,6 @@ export function ReportView({ report, currencySymbol = '$', inspect = true }: Rep
       {report.entity ? (
         <header style={styles.entity}>
           <h2 style={styles.entityName}>{report.entity.name}</h2>
-          {report.entity.country ? (
-            <div style={styles.entitySub}>{report.entity.country}</div>
-          ) : null}
         </header>
       ) : null}
 

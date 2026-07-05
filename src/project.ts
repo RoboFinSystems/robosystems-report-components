@@ -107,8 +107,28 @@ export function calcSubtotals(model: NormalizedReport): Set<string> {
   return out
 }
 
-function structureForBlock(model: NormalizedReport, blockType: string): StructureInfo | null {
-  return model.structures.find((s) => s.blockType === blockType) ?? null
+/**
+ * The structure supplying a block's networks. An Information Block with a
+ * `structureId` (the SEC adapter) resolves by identity — a filing has many
+ * structures, several sharing one `blockType` (balance sheet main + parenthetical),
+ * so identity is the only unambiguous link. The holon/file path has no
+ * `structureId` and matches by `blockType` (one structure per canonical block).
+ */
+function structureForBlock(model: NormalizedReport, ib: InformationBlock): StructureInfo | null {
+  if (ib.structureId) {
+    const byId = model.structures.find((s) => s.id === ib.structureId)
+    if (byId) return byId
+  }
+  return model.structures.find((s) => s.blockType === ib.blockType) ?? null
+}
+
+/** Ordering key for a block: its structure's filing sequence, else the canonical order. */
+function blockOrder(model: NormalizedReport, ib: InformationBlock): number {
+  if (ib.structureId) {
+    const s = model.structures.find((x) => x.id === ib.structureId)
+    if (s?.order !== undefined) return s.order
+  }
+  return BLOCK_ORDER[ib.blockType] ?? 99
 }
 
 function columnLabel(period: PeriodInfo): string {
@@ -141,7 +161,7 @@ function buildStatement(
   ib: InformationBlock,
   subtotals: Set<string>
 ): Statement {
-  const structure = structureForBlock(model, ib.blockType)
+  const structure = structureForBlock(model, ib)
   const order = structure ? presentationOrder(model, structure.id) : new Map<string, OrderEntry>()
 
   const facts = model.facts.filter((f) => f.factSet !== null && f.factSet === ib.factSet)
@@ -156,10 +176,10 @@ function buildStatement(
     if (idx === undefined) continue
     let cells = cellsByElement.get(fact.element)
     if (!cells) {
-      cells = columns.map(() => ({ value: null, fact: null }))
+      cells = columns.map(() => ({ value: null, fact: null, textValue: null }))
       cellsByElement.set(fact.element, cells)
     }
-    cells[idx] = { value: fact.value, fact }
+    cells[idx] = { value: fact.value, fact, textValue: fact.textValue ?? null }
   }
 
   const rows: StatementRow[] = [...cellsByElement.keys()]
@@ -179,14 +199,40 @@ function buildStatement(
       cells: cellsByElement.get(id) as RowCell[],
     }))
 
+  // A block linked to a specific structure (SEC) titles itself from that
+  // structure's name — "Consolidated Balance Sheets", distinct from its
+  // "(Parenthetical)" sibling — rather than the generic canonical heading.
+  const title = ib.structureId
+    ? (structure?.structureName ?? ib.label ?? BLOCK_TITLES[ib.blockType] ?? ib.blockType)
+    : (BLOCK_TITLES[ib.blockType] ?? ib.label ?? ib.blockType)
+
   return {
     ib,
     blockType: ib.blockType,
-    title: BLOCK_TITLES[ib.blockType] ?? ib.label ?? ib.blockType,
-    structureName: structure?.structureName ?? ib.label ?? null,
+    title,
+    structureName: ib.structureId ? null : (structure?.structureName ?? ib.label ?? null),
     columns,
     rows,
   }
+}
+
+/** Section metadata (id + display title) for a report, in canonical order. */
+export function reportSections(model: NormalizedReport): Array<{ id: string; title: string }> {
+  return buildStatements(model).map((s) => ({ id: s.ib.id, title: s.title }))
+}
+
+/**
+ * Narrow a whole report to a single section (one Information Block) so it can be
+ * rendered on its own. `buildStatements` only iterates `informationBlocks`, so
+ * restricting to one yields exactly that section — the facts, structures, and
+ * networks stay intact because `buildStatement` filters them by the block.
+ */
+export function sliceReportSection(
+  model: NormalizedReport,
+  informationBlockId: string
+): NormalizedReport {
+  const ib = model.informationBlocks.find((b) => b.id === informationBlockId)
+  return { ...model, informationBlocks: ib ? [ib] : [] }
 }
 
 /** Reconstruct every statement in the report, in canonical block order. */
@@ -195,8 +241,7 @@ export function buildStatements(model: NormalizedReport): Statement[] {
   return [...model.informationBlocks]
     .sort(
       (a, b) =>
-        (BLOCK_ORDER[a.blockType] ?? 99) - (BLOCK_ORDER[b.blockType] ?? 99) ||
-        a.blockType.localeCompare(b.blockType)
+        blockOrder(model, a) - blockOrder(model, b) || a.blockType.localeCompare(b.blockType)
     )
     .map((ib) => buildStatement(model, ib, subtotals))
 }

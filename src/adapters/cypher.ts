@@ -1,31 +1,31 @@
 /**
- * The cypher / GraphQL adapter — a live graph database (an entity graph **or**
- * the SEC repository) read read-only with an API key. One adapter for both:
- * only the endpoint / `graphId` differ.
+ * The cypher adapter — a whole-report `ReportAdapter` over the live SEC graph.
  *
- * Phase 2 (Mode B). Stubbed for now so the seam and the `./adapters` export
- * surface are in place; the holon-viewer's SEC mode will drive its build-out.
+ * This is a convenience wrapper: it loads the section list, then every section,
+ * and merges them into one `NormalizedReport`. Apps that want responsive,
+ * lazy-per-section loading should call `fetchSecReportShell` + `fetchSecSection`
+ * directly (see `./sec`) rather than materializing a whole filing up front.
  */
+import type { SecQuery } from './sec'
+import { fetchSecReportShell, fetchSecSection, mergeSecSections } from './sec'
 import type { ReportAdapter } from './types'
 
 export interface CypherAdapterConfig {
-  /** GraphQL / cypher endpoint base URL. */
-  endpoint: string
-  /** User-supplied API key (sent client-side; never app-managed). */
-  apiKey: string
-  /** Target graph — an entity graph id or the SEC repository id. */
-  graphId: string
-  /** The report to materialize. */
+  /** Injected transport over `POST /v1/graphs/{graphId}/query` (auth lives here). */
+  query: SecQuery
+  /** The report to materialize — a `Report.identifier`. */
   reportId: string
 }
 
 export function cypherAdapter(config: CypherAdapterConfig): ReportAdapter {
   return {
-    source: `cypher:${config.graphId}/${config.reportId}`,
+    source: `sec:${config.reportId}`,
     load: async () => {
-      throw new Error(
-        'The cypher adapter is not implemented yet (phase 2 / Mode B — live SEC graph).'
+      const shell = await fetchSecReportShell(config.query, config.reportId)
+      const sections = await Promise.all(
+        shell.sections.map((section) => fetchSecSection(config.query, shell, section))
       )
+      return mergeSecSections(shell, sections)
     },
   }
 }

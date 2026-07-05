@@ -6,8 +6,10 @@
  * theme it, with sensible RoboSystems defaults baked in as fallbacks.
  */
 import type { CSSProperties } from 'react'
+import { isExternalFactUrl } from '../constants'
 import { formatMoney, formatPeriod } from '../format'
 import type { Statement, StatementRow } from '../model'
+import { ExternalTextBlock } from './ExternalTextBlock'
 
 export interface StatementTableProps {
   statement: Statement
@@ -66,6 +68,18 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: 'var(--rs-font-mono, ui-monospace, SFMono-Regular, monospace)',
     fontVariantNumeric: 'tabular-nums',
   },
+  textBlockCell: {
+    padding: '0.75rem',
+    borderTop: '1px solid var(--rs-border, #e5e7eb)',
+  },
+  textBlockLabel: {
+    fontSize: '0.7rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontWeight: 600,
+    color: 'var(--rs-muted, #6b7280)',
+    marginBottom: '0.5rem',
+  },
 }
 
 export function StatementTable({
@@ -100,6 +114,24 @@ export function StatementTable({
         </thead>
         <tbody>
           {rows.map((row) => {
+            // An externalized text-block / policy disclosure: render its fetched
+            // HTML full-width instead of a URL squeezed into a value cell.
+            const textBlock = row.cells.find(
+              (c) => c.value === null && isExternalFactUrl(c.textValue)
+            )
+            if (textBlock?.textValue) {
+              return (
+                <tr key={row.element.id}>
+                  <td colSpan={columns.length + 1} style={styles.textBlockCell}>
+                    <div style={styles.textBlockLabel} title={row.element.qname}>
+                      {row.element.label}
+                    </div>
+                    <ExternalTextBlock url={textBlock.textValue} />
+                  </td>
+                </tr>
+              )
+            }
+
             const isGrandTotal = row.isSubtotal && row.depth === 0
             const allZeroOrNull = row.cells.every((c) => c.value === null || c.value === 0)
             const rowStyle: CSSProperties = {
@@ -123,6 +155,11 @@ export function StatementTable({
                     selected.elementId === row.element.id &&
                     selected.columnIndex === i
                   const clickable = onCellClick && cell.fact !== null
+                  // A non-numeric fact (a Cover Page flag, a narrative disclosure)
+                  // renders its string left-aligned in a normal face, not as a
+                  // right-aligned em-dash.
+                  const isText =
+                    cell.value === null && cell.textValue != null && cell.textValue !== ''
                   const numStyle: CSSProperties = {
                     ...styles.numCell,
                     fontWeight: row.isSubtotal ? 600 : 400,
@@ -130,9 +167,16 @@ export function StatementTable({
                     cursor: clickable ? 'pointer' : 'default',
                     backgroundColor: isSelected ? 'var(--rs-selected-bg, #dbeafe)' : undefined,
                     color:
-                      !row.isSubtotal && (cell.value === null || cell.value === 0)
+                      !isText && !row.isSubtotal && (cell.value === null || cell.value === 0)
                         ? 'var(--rs-muted, #9ca3af)'
                         : undefined,
+                    ...(isText
+                      ? {
+                          textAlign: 'left',
+                          whiteSpace: 'normal',
+                          fontFamily: 'var(--rs-font-sans, ui-sans-serif, system-ui, sans-serif)',
+                        }
+                      : {}),
                   }
                   return (
                     <td
@@ -140,7 +184,7 @@ export function StatementTable({
                       style={numStyle}
                       onClick={clickable ? () => onCellClick?.(row, i) : undefined}
                     >
-                      {formatMoney(cell.value, { currencySymbol })}
+                      {isText ? cell.textValue : formatMoney(cell.value, { currencySymbol })}
                     </td>
                   )
                 })}

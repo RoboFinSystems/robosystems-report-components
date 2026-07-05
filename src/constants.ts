@@ -104,6 +104,16 @@ export function humanize(iri: string): string {
   return local.replace(/(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/g, ' ')
 }
 
+/**
+ * A large text-block / policy fact whose HTML (or plain-text) body is too big to
+ * store inline, so the platform externalizes it to the public CDN and the fact's
+ * value is the URL (`…/fact_<hash>.html` or `.txt`). The renderer fetches and
+ * embeds these instead of printing the raw link.
+ */
+export function isExternalFactUrl(value: string | null | undefined): boolean {
+  return !!value && /^https?:\/\/\S+\/fact_[0-9a-f]+\.(html|txt)$/i.test(value)
+}
+
 /** Stable display order for the canonical statement blocks; others fall after. */
 export const BLOCK_ORDER: Record<string, number> = {
   balance_sheet: 0,

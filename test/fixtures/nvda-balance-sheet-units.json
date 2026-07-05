@@ -1,0 +1,270 @@
+{
+  "ms": 79.816,
+  "row_count": 66,
+  "data": [
+    {
+      "fid": "883dd6c5-1d1c-5d63-a90c-e86189da61b5",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "d53bf820-b1d9-5f50-8f9e-247b84fb9d1c",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "7e0eb1c9-91af-5fad-81e8-09f502e760c1",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "27a333c6-0f04-5663-b748-fb5fd7c97a02",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "662b1247-7d9b-564e-85f2-4b17bf05c7f6",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "5004681d-28e6-5b36-96aa-dd9a6dc9d948",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "ffa1429d-25a5-55e4-b7e2-16cbd6e5a8a6",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "85a44cc4-0234-5fac-ac3e-37a26bb650d7",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "3a03f304-af4c-5ccf-bf5b-d246c4321909",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "a2c67558-b477-5cb4-9627-6dc3184d4a79",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "725aa1ee-dbe1-5c15-b6d8-be8ae8ffc4ed",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "99b67c7b-ca97-5585-9c80-f36534a2c55b",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "6255516d-7ebe-58be-9d17-2f69217d9e02",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "6e48c047-9a89-5c9e-b3ce-c7ee4d2fa5a6",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "ea159b6d-f689-5c2c-a296-60b89132fbed",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "97a581d0-0257-5807-b709-56bc33347235",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "7b331695-86d9-5b4a-9e45-54cfe44e53a5",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "6c4c1ab9-1b9f-5a9b-8fd6-53b421ecac75",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "0432ae20-c2b4-54c7-b2ad-112d31335505",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "10aee790-c0ed-58dd-90db-8ea1de27044c",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "06a7e1d2-a53a-5f71-a653-4a5ca7755bbe",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "53f20217-5fc6-5965-85f5-feac9e3e3ef8",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "aa7a143d-cd7f-51c1-a685-8d302c9402da",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "105ec1ca-13b9-500e-a9ae-92997e09aab1",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "0cbd6ea3-2e60-5731-8a46-40cb9f4539af",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "08b049a6-5f04-5a8c-9a4d-b1aaae4ea61d",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "0fe16336-cea7-5be9-ae32-0ddd6a654ed3",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "0bf5f26d-96b5-527e-a691-f3b2f7f8e2d7",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "b27c6039-9488-5be0-ad13-3e3f5a9a7e9e",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "e8b27674-631a-525c-b2b4-2789c57a12b7",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "731c0cc4-885e-5e90-9b5b-f20bba5ad1b8",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "48c95235-d01c-5b73-974f-e4eb3e836686",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "9ce5a71d-e460-52aa-8912-505821fd4d71",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "e471b3e0-6f7b-572c-943e-dab7572c7ef9",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "e35d2c09-c5e1-5673-a22e-1ef82bbdbaa2",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "70a8608f-f08d-5569-a8d1-32ca4936e756",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "9c38daeb-e756-5b26-81bb-caf88f0042f7",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "dbedab82-d29f-58fd-99f4-5247274690f6",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "3a652d72-4039-503c-9a59-2b33e391c27e",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "fe9d6f36-c6bc-5b58-b53f-f5ed470f92e3",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "45d15c7d-896a-50c4-9ae1-b9cfc0b352b3",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "cc3ad466-f294-5453-b0d1-8c85c2202b0b",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "be356be2-df07-5095-b972-7ef75ea6bf57",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "3c74f9a8-09d5-569e-8d43-732311954404",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "221b5b64-5d3c-5991-afa3-2f6123a46253",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "68b5e6eb-d745-5167-9071-34539b98f8c5",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "ca1ac4b7-eca4-5489-bf95-1a15e044c7ad",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "8f447616-a829-54d6-818a-07cfa248bbf6",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "dd6a6853-21d2-5a13-a6e8-caf31a584859",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "797dbcd1-7e63-5d46-9dad-3b60504c466a",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "fd308c1f-0889-5cac-b803-6924136e2737",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "0af8783b-9996-58e4-8dc5-73fad7c5a59b",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "c074374b-d539-565c-a965-cdfee29137f8",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "d5165ab9-187c-5b3f-b63a-e872aaae144c",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "ba6db0ff-c696-50c1-8ad7-ce4b2dfdb2f4",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "6eb18ecc-13ef-5fe3-b7b9-693a8994213e",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "d3d5e967-238d-5c21-86a7-2d2393f2a67e",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "25ef581b-6fe3-56ad-b2ee-163902f101ab",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "49a97088-6273-5d81-bb64-1d8100810924",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "2153cb60-5740-5878-a1e3-d7a4c9f48f4b",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "284ff173-bc73-5e6c-960b-7363c3f977e1",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "65f97610-7d66-5cfd-b4aa-670ec6b0e185",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "d5e367a0-ee80-5576-a15b-1dc7ec51e250",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "2fe5049d-7e3f-5489-9701-4b0f780de8e2",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "8fb90593-0fcb-572a-9470-6a338bda680a",
+      "unit": "iso4217:USD"
+    },
+    {
+      "fid": "4d03eff2-7f46-54c9-a8e6-34754179d1e1",
+      "unit": "iso4217:USD"
+    }
+  ]
+}
