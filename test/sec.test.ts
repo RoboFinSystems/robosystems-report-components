@@ -3,8 +3,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { SecQuery } from '../src/adapters/sec'
-import { fetchSecReportShell, fetchSecSection, parseStructureDefinition } from '../src/adapters/sec'
-import type { Statement } from '../src/model'
+import {
+  fetchSecReportShell,
+  fetchSecSection,
+  mergeSecSections,
+  parseStructureDefinition,
+} from '../src/adapters/sec'
+import { isExternalFactUrl } from '../src/constants'
+import type { NormalizedReport, Statement } from '../src/model'
 import { buildStatements, footCheck } from '../src/project'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -132,5 +138,135 @@ describe('sec adapter — cover page (text facts)', () => {
     const cell = nameRow!.cells.find((c) => c.textValue)
     expect(cell?.value).toBeNull()
     expect(cell?.textValue).toBe('NVIDIA CORP')
+  })
+})
+
+describe('isExternalFactUrl', () => {
+  it('matches externalized fact URLs (html + txt) and rejects everything else', () => {
+    expect(
+      isExternalFactUrl(
+        'https://public.robosystems.ai/2026/0001522767/0001522767-26-000030/fact_ad2ee5cf0f43.html'
+      )
+    ).toBe(true)
+    expect(isExternalFactUrl('https://public.robosystems.ai/x/fact_deadbeef.txt')).toBe(true)
+    // rejects: not a fact_* URL, wrong extension, non-hex hash, non-url, nullish
+    expect(isExternalFactUrl('https://api.robosystems.ai/v1/graphs')).toBe(false)
+    expect(isExternalFactUrl('https://public.robosystems.ai/x/fact_abc.pdf')).toBe(false)
+    expect(isExternalFactUrl('https://public.robosystems.ai/x/fact_xyz.html')).toBe(false)
+    expect(isExternalFactUrl('10-K')).toBe(false)
+    expect(isExternalFactUrl(null)).toBe(false)
+    expect(isExternalFactUrl(undefined)).toBe(false)
+  })
+})
+
+describe('projection — multiple structures sharing a block type', () => {
+  // A filing has several structures of one canonical type (e.g. the balance
+  // sheet and its parenthetical). Each Information Block must resolve to its own
+  // structure via `structureId`, not collapse onto the first blockType match.
+  const report: NormalizedReport = {
+    reportId: 't',
+    reportIri: null,
+    entity: null,
+    informationBlocks: [
+      { id: 'ib1', blockType: 'balance_sheet', factSet: 'fs1', label: 'A', structureId: 's1' },
+      { id: 'ib2', blockType: 'balance_sheet', factSet: 'fs2', label: 'B', structureId: 's2' },
+    ],
+    structures: [
+      {
+        id: 's1',
+        blockType: 'balance_sheet',
+        roleUri: null,
+        structureName: 'Balance Sheet A',
+        order: 0,
+      },
+      {
+        id: 's2',
+        blockType: 'balance_sheet',
+        roleUri: null,
+        structureName: 'Balance Sheet B',
+        order: 1,
+      },
+    ],
+    facts: [
+      {
+        id: 'f1',
+        element: 'x:Cash',
+        period: 'p1',
+        unit: null,
+        entity: null,
+        factSet: 'fs1',
+        value: 100,
+        decimals: null,
+      },
+      {
+        id: 'f2',
+        element: 'x:Debt',
+        period: 'p1',
+        unit: null,
+        entity: null,
+        factSet: 'fs2',
+        value: 200,
+        decimals: null,
+      },
+    ],
+    elements: {
+      'x:Cash': {
+        id: 'x:Cash',
+        qname: 'x:Cash',
+        label: 'Cash',
+        balance: 'debit',
+        periodType: 'instant',
+        abstract: false,
+        monetary: true,
+      },
+      'x:Debt': {
+        id: 'x:Debt',
+        qname: 'x:Debt',
+        label: 'Debt',
+        balance: 'credit',
+        periodType: 'instant',
+        abstract: false,
+        monetary: true,
+      },
+    },
+    periods: {
+      p1: {
+        id: 'p1',
+        type: 'instant',
+        instant: '2026-01-01',
+        startDate: null,
+        endDate: null,
+        end: '2026-01-01',
+      },
+    },
+    units: {},
+    calcAssociations: [],
+    presAssociations: [],
+  }
+
+  it('resolves each block to its own structure (title + facts), not the first match', () => {
+    const statements = buildStatements(report)
+    expect(statements).toHaveLength(2)
+    expect(statements.map((s) => s.title)).toEqual(['Balance Sheet A', 'Balance Sheet B'])
+    expect(statements[0].rows.map((r) => r.element.qname)).toEqual(['x:Cash'])
+    expect(statements[1].rows.map((r) => r.element.qname)).toEqual(['x:Debt'])
+  })
+})
+
+describe('mergeSecSections — whole-report reconstruction', () => {
+  it('concatenates single-section reports into one model', async () => {
+    const bsSection = shell.sections.find(
+      (s) => s.canonicalType === 'balance_sheet' && !/parenthetical/i.test(s.title)
+    )!
+    const coverSection = shell.sections.find((s) => s.kind === 'Cover')!
+    const bs = await fetchSecSection(stubQuery, shell, bsSection)
+    const cover = await fetchSecSection(stubQuery, shell, coverSection)
+
+    const merged = mergeSecSections(shell, [bs, cover])
+    expect(merged.informationBlocks).toHaveLength(2)
+    expect(merged.structures).toHaveLength(2)
+    expect(merged.facts.length).toBe(bs.facts.length + cover.facts.length)
+    expect(merged.entity?.name).toBe('NVIDIA CORP')
+    expect(buildStatements(merged)).toHaveLength(2)
   })
 })
