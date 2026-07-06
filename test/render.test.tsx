@@ -14,7 +14,8 @@ describe('ReportView — renders into the DOM', () => {
     const report = await parseJsonld(holon)
     render(<ReportView report={report} inspect={false} />)
 
-    expect(screen.getByText(/Lemonade Stand/)).toBeTruthy()
+    // The entity appears both in the report header and each section's slicer bar.
+    expect(screen.getAllByText(/Lemonade Stand/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Balance Sheet')).toBeTruthy()
     expect(screen.getByText('Income Statement')).toBeTruthy()
 

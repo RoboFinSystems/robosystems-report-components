@@ -1,20 +1,23 @@
 /**
- * Click-a-fact inspection: the selected cell's element / period / unit, plus —
- * when the element is a calculation subtotal — the calculation rule it foots,
- * computed live in the browser (`13,550 + 900 = 14,450 ✓`).
+ * Click-a-fact inspection: the selected cell's aspects — concept, value, period,
+ * entity, dimensions, unit, balance, rounding — plus, when the element is a
+ * calculation subtotal, the rule it foots (computed live in the browser).
+ *
+ * Crucially the period, unit and dimensions are read from the *cell's own fact*,
+ * not from the column — so a value never borrows a neighbouring period's metadata
+ * (the bug the pivot rewrite set out to kill).
  */
 import type { CSSProperties, ReactNode } from 'react'
-import { formatMoney, formatPeriod } from '../format'
-import type { NormalizedReport, Statement, StatementRow } from '../model'
+import { currencySymbolFor, formatPeriod, formatValue, numericKindOf } from '../format'
+import type { NormalizedReport, PivotRow, PivotTable, UnitInfo } from '../model'
 import { footCheck } from '../project'
 
 export interface FactInspectorProps {
   report: NormalizedReport
-  statement: Statement
-  row: StatementRow
+  table: PivotTable
+  row: PivotRow
   columnIndex: number
   onClose?: () => void
-  currencySymbol?: string
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -34,8 +37,6 @@ const styles: Record<string, CSSProperties> = {
     gap: '1rem',
     marginBottom: '0.75rem',
   },
-  // `minWidth: 0` lets this flex child shrink below its content so the long
-  // label / qname wrap inside the panel instead of overflowing it.
   headerText: { minWidth: 0 },
   label: { fontSize: '1rem', fontWeight: 700, margin: 0, overflowWrap: 'anywhere' },
   qname: {
@@ -43,7 +44,6 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: 'var(--rs-font-mono, ui-monospace, monospace)',
     fontSize: '0.8rem',
     color: 'var(--rs-primary-700, #1d4ed8)',
-    // qnames are single unbroken tokens — break anywhere so they don't overflow.
     overflowWrap: 'anywhere',
   },
   close: {
@@ -63,6 +63,7 @@ const styles: Record<string, CSSProperties> = {
   },
   key: { color: 'var(--rs-muted, #6b7280)' },
   mono: { fontFamily: 'var(--rs-font-mono, ui-monospace, monospace)' },
+  dims: { display: 'grid', gap: '0.15rem' },
   footing: {
     marginTop: '0.85rem',
     paddingTop: '0.75rem',
@@ -91,20 +92,20 @@ function Field({ k, children }: { k: string; children: ReactNode }) {
   )
 }
 
-export function FactInspector({
-  report,
-  statement,
-  row,
-  columnIndex,
-  onClose,
-  currencySymbol = '$',
-}: FactInspectorProps) {
+function symbolFor(unit: UnitInfo | undefined): string {
+  return unit?.symbol ?? currencySymbolFor(unit?.measure) ?? '$'
+}
+
+export function FactInspector({ report, table, row, columnIndex, onClose }: FactInspectorProps) {
   const { element } = row
   const cell = row.cells[columnIndex]
-  const column = statement.columns[columnIndex]
-  const unit = cell.fact?.unit ? report.units[cell.fact.unit] : null
-  const foot = footCheck(report, statement, element.id, columnIndex)
-  const sym = currencySymbol
+  const fact = cell?.fact ?? null
+  const period = fact ? report.periods[fact.period] : null
+  const unit = fact?.unit ? report.units[fact.unit] : undefined
+  const kind = numericKindOf(element)
+  const dims = fact?.dimensions ?? row.members
+  const foot = footCheck(report, table, element.id, columnIndex)
+  const sym = symbolFor(unit)
 
   return (
     <div style={styles.panel}>
@@ -122,18 +123,35 @@ export function FactInspector({
 
       <div style={styles.grid}>
         <Field k="Value">
-          {cell.value === null && cell.textValue ? (
+          {cell?.value === null && cell?.textValue ? (
             <span>{cell.textValue}</span>
           ) : (
-            <span style={styles.mono}>{formatMoney(cell.value, { currencySymbol: sym })}</span>
+            <span style={styles.mono}>
+              {formatValue(cell?.value ?? null, { numericKind: kind, symbol: sym })}
+            </span>
           )}
         </Field>
-        <Field k="Period">
-          {formatPeriod(column.period)} <span style={styles.key}>({column.period.type})</span>
-        </Field>
+        {period ? (
+          <Field k="Period">
+            {formatPeriod(period)} <span style={styles.key}>({period.type})</span>
+          </Field>
+        ) : null}
+        {report.entity ? <Field k="Entity">{report.entity.name}</Field> : null}
+        {dims.length ? (
+          <Field k="Dimensions">
+            <span style={styles.dims}>
+              {dims.map((d) => (
+                <span key={d.axis}>
+                  <span style={styles.key}>{d.axisLabel}:</span>{' '}
+                  {d.explicit ? d.memberLabel : (d.typedValue ?? d.memberLabel)}
+                </span>
+              ))}
+            </span>
+          </Field>
+        ) : null}
         <Field k="Unit">{unit ? unit.label : '—'}</Field>
         {element.balance ? <Field k="Balance">{element.balance}</Field> : null}
-        {cell.fact?.decimals ? <Field k="Decimals">{cell.fact.decimals}</Field> : null}
+        {fact?.decimals ? <Field k="Decimals">{fact.decimals}</Field> : null}
       </div>
 
       {foot ? (
@@ -145,19 +163,22 @@ export function FactInspector({
               return (
                 <span key={term.element.id} title={term.element.qname}>
                   {op}
-                  {formatMoney(term.value === null ? 0 : Math.abs(term.value), {
-                    currencySymbol: sym,
+                  {formatValue(term.value === null ? 0 : Math.abs(term.value), {
+                    numericKind: 'monetary',
+                    symbol: sym,
                   })}
                 </span>
               )
             })}
             {' = '}
-            <strong>{formatMoney(foot.expected, { currencySymbol: sym })}</strong>{' '}
+            <strong>
+              {formatValue(foot.expected, { numericKind: 'monetary', symbol: sym })}
+            </strong>{' '}
             {foot.ok ? (
               <span style={{ color: 'var(--rs-success, #00875a)' }}>✓</span>
             ) : (
               <span style={{ color: 'var(--rs-error, #dc2626)' }}>
-                ✗ (reported {formatMoney(foot.actual, { currencySymbol: sym })})
+                ✗ (reported {formatValue(foot.actual, { numericKind: 'monetary', symbol: sym })})
               </span>
             )}
           </div>

@@ -14,6 +14,7 @@
 export { BLOCK_ORDER, BLOCK_TITLES, NS, humanize, isExternalFactUrl, qname } from './constants'
 export * from './format'
 export * from './model'
+export { buildPivot, buildPivots, defaultPivotConfig, reportSections } from './pivot'
 export * from './project'
 
 // Components

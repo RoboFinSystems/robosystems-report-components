@@ -1,37 +1,14 @@
 /**
- * Reconstruction: a `NormalizedReport` → renderable `Statement`s.
+ * Presentation/calculation helpers over a `NormalizedReport`, plus the live
+ * footing check used by the fact inspector.
  *
- * This is the source-agnostic half of the library — the part that is identical
- * for every adapter. It is a TypeScript port of the RoboSystems platform's
- * DataBook converter:
- *
- *  - **presentation walk** — a post-order DFS of the presentation network, so a
- *    total renders *after* its components (cash + receivables … then *Assets,
- *    Current*; the section subtotals last). `order` is the flattened post-order
- *    position; `depth` is the tree depth (drives indentation).
- *  - **subtotal detection** — a concept is a subtotal iff it is a *calculation
- *    parent*. A presentation leaf can still be a subtotal (Gross Profit is a
- *    presentation sibling but a calculation parent), so bolding off the calc
- *    tree marks exactly the right rows.
- *  - **table projection** — collect a block's facts by `factSet`, key by
- *    element, derive period columns from the facts themselves, lay rows out in
- *    presentation order.
+ * The heavy lifting — turning a report into renderable tables — now lives in the
+ * fact pivot engine (`pivot.ts`). This file holds the small, reusable graph
+ * utilities that the engine and the components share: the presentation-order
+ * walk, the calculation-subtotal set, single-section slicing, and `footCheck`.
  */
-import { BLOCK_ORDER, BLOCK_TITLES, humanize, qname } from './constants'
-import { formatDate } from './format'
-import type {
-  CalcAssociation,
-  ElementInfo,
-  Fact,
-  InformationBlock,
-  NormalizedReport,
-  PeriodInfo,
-  RowCell,
-  Statement,
-  StatementColumn,
-  StatementRow,
-  StructureInfo,
-} from './model'
+import { humanize, qname } from './constants'
+import type { CalcAssociation, ElementInfo, NormalizedReport, PivotTable } from './model'
 
 interface OrderEntry {
   order: number
@@ -53,8 +30,9 @@ function fallbackElement(id: string): ElementInfo {
 /**
  * Post-order the presentation arcs of one structure → `{element: {order, depth}}`.
  * Roots (a `from` that is never a `to`) are visited by their subtree's leading
- * arc order, so a balance sheet's roots (Assets, then Liabilities and Equity)
- * come out in the right sequence.
+ * arc order. Retained as a reusable utility; the pivot engine builds its own
+ * pre-order tree (it needs abstract headers), but external callers may still want
+ * a flat order map.
  */
 export function presentationOrder(
   model: NormalizedReport,
@@ -108,124 +86,10 @@ export function calcSubtotals(model: NormalizedReport): Set<string> {
 }
 
 /**
- * The structure supplying a block's networks. An Information Block with a
- * `structureId` (the SEC adapter) resolves by identity — a filing has many
- * structures, several sharing one `blockType` (balance sheet main + parenthetical),
- * so identity is the only unambiguous link. The holon/file path has no
- * `structureId` and matches by `blockType` (one structure per canonical block).
- */
-function structureForBlock(model: NormalizedReport, ib: InformationBlock): StructureInfo | null {
-  if (ib.structureId) {
-    const byId = model.structures.find((s) => s.id === ib.structureId)
-    if (byId) return byId
-  }
-  return model.structures.find((s) => s.blockType === ib.blockType) ?? null
-}
-
-/** Ordering key for a block: its structure's filing sequence, else the canonical order. */
-function blockOrder(model: NormalizedReport, ib: InformationBlock): number {
-  if (ib.structureId) {
-    const s = model.structures.find((x) => x.id === ib.structureId)
-    if (s?.order !== undefined) return s.order
-  }
-  return BLOCK_ORDER[ib.blockType] ?? 99
-}
-
-function columnLabel(period: PeriodInfo): string {
-  return formatDate(period.end)
-}
-
-/** Period columns derived from the facts in one block, keyed and sorted by end. */
-function deriveColumns(model: NormalizedReport, facts: Fact[]): StatementColumn[] {
-  const byEnd = new Map<string, PeriodInfo>()
-  for (const fact of facts) {
-    const period = model.periods[fact.period]
-    if (!period || !period.end) continue
-    const existing = byEnd.get(period.end)
-    // Prefer a duration as the column representative — it carries the span.
-    if (!existing || (existing.type === 'instant' && period.type === 'duration')) {
-      byEnd.set(period.end, period)
-    }
-  }
-  return [...byEnd.values()]
-    .sort((a, b) => {
-      const aStart = a.startDate ?? a.end
-      const bStart = b.startDate ?? b.end
-      return aStart.localeCompare(bStart) || a.end.localeCompare(b.end)
-    })
-    .map((period) => ({ key: period.end, label: columnLabel(period), period }))
-}
-
-function buildStatement(
-  model: NormalizedReport,
-  ib: InformationBlock,
-  subtotals: Set<string>
-): Statement {
-  const structure = structureForBlock(model, ib)
-  const order = structure ? presentationOrder(model, structure.id) : new Map<string, OrderEntry>()
-
-  const facts = model.facts.filter((f) => f.factSet !== null && f.factSet === ib.factSet)
-  const columns = deriveColumns(model, facts)
-  const colIndex = new Map(columns.map((c, i) => [c.key, i]))
-
-  const cellsByElement = new Map<string, RowCell[]>()
-  for (const fact of facts) {
-    const period = model.periods[fact.period]
-    if (!period) continue
-    const idx = colIndex.get(period.end)
-    if (idx === undefined) continue
-    let cells = cellsByElement.get(fact.element)
-    if (!cells) {
-      cells = columns.map(() => ({ value: null, fact: null, textValue: null }))
-      cellsByElement.set(fact.element, cells)
-    }
-    cells[idx] = { value: fact.value, fact, textValue: fact.textValue ?? null }
-  }
-
-  const rows: StatementRow[] = [...cellsByElement.keys()]
-    .map((id) => {
-      const entry = order.get(id)
-      return {
-        id,
-        order: entry ? entry.order : Number.MAX_SAFE_INTEGER,
-        depth: entry ? entry.depth : 0,
-      }
-    })
-    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
-    .map(({ id, depth }) => ({
-      element: model.elements[id] ?? fallbackElement(id),
-      depth,
-      isSubtotal: subtotals.has(id),
-      cells: cellsByElement.get(id) as RowCell[],
-    }))
-
-  // A block linked to a specific structure (SEC) titles itself from that
-  // structure's name — "Consolidated Balance Sheets", distinct from its
-  // "(Parenthetical)" sibling — rather than the generic canonical heading.
-  const title = ib.structureId
-    ? (structure?.structureName ?? ib.label ?? BLOCK_TITLES[ib.blockType] ?? ib.blockType)
-    : (BLOCK_TITLES[ib.blockType] ?? ib.label ?? ib.blockType)
-
-  return {
-    ib,
-    blockType: ib.blockType,
-    title,
-    structureName: ib.structureId ? null : (structure?.structureName ?? ib.label ?? null),
-    columns,
-    rows,
-  }
-}
-
-/** Section metadata (id + display title) for a report, in canonical order. */
-export function reportSections(model: NormalizedReport): Array<{ id: string; title: string }> {
-  return buildStatements(model).map((s) => ({ id: s.ib.id, title: s.title }))
-}
-
-/**
  * Narrow a whole report to a single section (one Information Block) so it can be
- * rendered on its own. `buildStatements` only iterates `informationBlocks`, so
- * restricting to one yields exactly that section — the facts, structures, and
- * networks stay intact because `buildStatement` filters them by the block.
+ * rendered on its own. `buildPivots` only iterates `informationBlocks`, so
+ * restricting to one yields exactly that section — facts, structures, and
+ * networks stay intact because the pivot filters them by the block.
  */
 export function sliceReportSection(
   model: NormalizedReport,
@@ -233,17 +97,6 @@ export function sliceReportSection(
 ): NormalizedReport {
   const ib = model.informationBlocks.find((b) => b.id === informationBlockId)
   return { ...model, informationBlocks: ib ? [ib] : [] }
-}
-
-/** Reconstruct every statement in the report, in canonical block order. */
-export function buildStatements(model: NormalizedReport): Statement[] {
-  const subtotals = calcSubtotals(model)
-  return [...model.informationBlocks]
-    .sort(
-      (a, b) =>
-        blockOrder(model, a) - blockOrder(model, b) || a.blockType.localeCompare(b.blockType)
-    )
-    .map((ib) => buildStatement(model, ib, subtotals))
 }
 
 // ── Footing check ────────────────────────────────────────────────────────────
@@ -268,11 +121,12 @@ export interface FootCheck {
 /**
  * Foot a subtotal live: sum its calculation children (× weight) and compare to
  * its reported value, e.g. `13,550 + 900 = 14,450 ✓`. Returns `null` when the
- * element is not a calculation parent (nothing to foot).
+ * element is not a calculation parent (nothing to foot). Values are read from the
+ * consolidated (undimensioned) row for each concept.
  */
 export function footCheck(
   model: NormalizedReport,
-  statement: Statement,
+  table: PivotTable,
   elementId: string,
   columnIndex: number
 ): FootCheck | null {
@@ -280,7 +134,7 @@ export function footCheck(
   if (!kids.length) return null
 
   const valueOf = (id: string): number | null => {
-    const row = statement.rows.find((r) => r.element.id === id)
+    const row = table.rows.find((r) => r.element.id === id && r.members.length === 0)
     return row ? (row.cells[columnIndex]?.value ?? null) : null
   }
 

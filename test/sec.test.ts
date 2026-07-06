@@ -10,8 +10,9 @@ import {
   parseStructureDefinition,
 } from '../src/adapters/sec'
 import { isExternalFactUrl } from '../src/constants'
-import type { NormalizedReport, Statement } from '../src/model'
-import { buildStatements, footCheck } from '../src/project'
+import type { NormalizedReport, PivotTable } from '../src/model'
+import { buildPivots } from '../src/pivot'
+import { footCheck } from '../src/project'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const fx = (name: string): Array<Record<string, unknown>> =>
@@ -43,11 +44,11 @@ const stubQuery: SecQuery = async (cypher, params = {}) => {
 const REPORT_ID = 'c26ebe09-3d6e-56a8-b086-d297c73e8831'
 const shell = await fetchSecReportShell(stubQuery, REPORT_ID)
 
-function latestCol(statement: Statement): number {
+function latestCol(statement: PivotTable): number {
   return statement.columns.length - 1
 }
-function valueOf(statement: Statement, qname: string, col = latestCol(statement)): number | null {
-  const row = statement.rows.find((r) => r.element.qname === qname)
+function valueOf(statement: PivotTable, qname: string, col = latestCol(statement)): number | null {
+  const row = statement.rows.find((r) => r.element.qname === qname && r.members.length === 0)
   return row ? (row.cells[col]?.value ?? null) : null
 }
 
@@ -99,7 +100,7 @@ describe('sec adapter — balance sheet section', () => {
 
   it('reconstructs one statement, titled from its structure', async () => {
     const report = await fetchSecSection(stubQuery, shell, section)
-    const statements = buildStatements(report)
+    const statements = buildPivots(report)
     expect(statements).toHaveLength(1)
     const bs = statements[0]
     expect(bs.blockType).toBe('balance_sheet')
@@ -110,7 +111,7 @@ describe('sec adapter — balance sheet section', () => {
 
   it('foots Liabilities & Equity live (49,510 + 157,293 = 206,803M, latest period)', async () => {
     const report = await fetchSecSection(stubQuery, shell, section)
-    const bs = buildStatements(report)[0]
+    const bs = buildPivots(report)[0]
     expect(valueOf(bs, 'us-gaap:Assets')).toBe(206803000000)
     expect(valueOf(bs, 'us-gaap:LiabilitiesAndStockholdersEquity')).toBe(206803000000)
     // Assets is a calculation parent → rendered as a subtotal.
@@ -132,7 +133,7 @@ describe('sec adapter — cover page (text facts)', () => {
   it('renders non-numeric facts as their string value', async () => {
     const cover = shell.sections.find((s) => s.kind === 'Cover')!
     const report = await fetchSecSection(stubQuery, shell, cover)
-    const statement = buildStatements(report)[0]
+    const statement = buildPivots(report)[0]
     const nameRow = statement.rows.find((r) => r.element.qname === 'dei:EntityRegistrantName')
     expect(nameRow).toBeDefined()
     const cell = nameRow!.cells.find((c) => c.textValue)
@@ -245,7 +246,7 @@ describe('projection — multiple structures sharing a block type', () => {
   }
 
   it('resolves each block to its own structure (title + facts), not the first match', () => {
-    const statements = buildStatements(report)
+    const statements = buildPivots(report)
     expect(statements).toHaveLength(2)
     expect(statements.map((s) => s.title)).toEqual(['Balance Sheet A', 'Balance Sheet B'])
     expect(statements[0].rows.map((r) => r.element.qname)).toEqual(['x:Cash'])
@@ -267,6 +268,6 @@ describe('mergeSecSections — whole-report reconstruction', () => {
     expect(merged.structures).toHaveLength(2)
     expect(merged.facts.length).toBe(bs.facts.length + cover.facts.length)
     expect(merged.entity?.name).toBe('NVIDIA CORP')
-    expect(buildStatements(merged)).toHaveLength(2)
+    expect(buildPivots(merged)).toHaveLength(2)
   })
 })
