@@ -4,10 +4,11 @@
  * A section is an XBRL hypercube; rendering it is pivoting its fact table. Every
  * fact is a point in aspect space (concept · period · entity · unit · dimensions);
  * a `PivotConfig` assigns each aspect a role — row, column, or slicer — and the
- * cells fall out. The default arrangement (concept hierarchy on rows, period and
- * multi-member dimensions on columns, entity and single-member dimensions as
+ * cells fall out. The default arrangement (concept hierarchy + multi-member
+ * dimensions on rows, period on columns, entity and single-member dimensions as
  * slicers) is derived per section, but nothing is hardcoded: a caller can move
- * any aspect to any role (the Pesseract "override the default view" model).
+ * any aspect to any role (the Pesseract "override the default view" model) —
+ * `pivotDimensionsOn` flips dimensions between rows and columns for the toggle.
  *
  * This supersedes the collision-prone `(element, period.end)` cell keying of the
  * legacy `buildStatement`. A cell is the one fact whose *full* aspect signature —
@@ -210,17 +211,36 @@ export function defaultPivotConfig(model: NormalizedReport, ib: InformationBlock
     }
   }
   const axes = [...membersByAxis.keys()].sort()
-  const columnAxes = axes.filter((a) => (membersByAxis.get(a)?.size ?? 0) > 1)
+  const memberAxes = axes.filter((a) => (membersByAxis.get(a)?.size ?? 0) > 1)
   const slicerAxes = axes.filter((a) => (membersByAxis.get(a)?.size ?? 0) <= 1)
 
+  // Dimensions default to *rows* (nested under the concept): financial statements
+  // are tall, not wide, so member breakdowns stack more legibly than they spread
+  // across columns. `pivotDimensionsOn` flips them to columns for the matrix view.
   return {
-    rows: ['concept'],
-    columns: ['period', ...columnAxes.map(dimKey)],
+    rows: ['concept', ...memberAxes.map(dimKey)],
+    columns: ['period'],
     slicers: [...(hasEntity ? (['entity'] as AspectKey[]) : []), ...slicerAxes.map(dimKey)],
     scale: 'auto',
     showAbstracts: true,
     dropSparsePeriods: true,
   }
+}
+
+/**
+ * Move every dimension axis to one side of the pivot — the toggle behind a
+ * "dimensions as rows / columns" control. Concept stays on rows and period on
+ * columns; only `dim:*` aspects move. Rows (nested breakdowns) is the default;
+ * columns gives the side-by-side matrix (equity components across the top).
+ */
+export function pivotDimensionsOn(config: PivotConfig, placement: 'rows' | 'columns'): PivotConfig {
+  const isDim = (k: AspectKey): boolean => k.startsWith('dim:')
+  const dims = [...config.rows, ...config.columns].filter(isDim)
+  const rows = config.rows.filter((k) => !isDim(k))
+  const columns = config.columns.filter((k) => !isDim(k))
+  if (placement === 'rows') rows.push(...dims)
+  else columns.push(...dims)
+  return { ...config, rows, columns }
 }
 
 // ── Columns ─────────────────────────────────────────────────────────────────
@@ -286,11 +306,18 @@ interface MemberCombo {
 
 /**
  * The distinct member combinations present across `facts` for the chosen axes,
- * ordered by each member's presentation position (domain-total last). The union
- * across periods, so the grid is regular (a member absent in one period shows an
- * empty cell rather than a ragged column set).
+ * ordered by each member's presentation position. The union across periods, so
+ * the grid is regular (a member absent in one period shows an empty cell rather
+ * than a ragged set). `domainLast` places the domain total (the consolidated,
+ * memberless combo) after its members (columns: a trailing "Total" column) or
+ * before them (rows: the concept row heads its indented member breakdown).
  */
-function memberCombos(facts: Fact[], axes: string[], order: Map<string, number>): MemberCombo[] {
+function memberCombos(
+  facts: Fact[],
+  axes: string[],
+  order: Map<string, number>,
+  domainLast: boolean
+): MemberCombo[] {
   if (axes.length === 0) return [{ sig: '', members: [], labels: [] }]
 
   // Distinct members seen per axis (+ whether a domain total exists), plus a
@@ -310,7 +337,11 @@ function memberCombos(facts: Fact[], axes: string[], order: Map<string, number>)
         const bo = b.qual?.member ? (order.get(b.qual.member) ?? Infinity) : Infinity
         return ao - bo || (a.qual?.memberLabel ?? a.key).localeCompare(b.qual?.memberLabel ?? b.key)
       })
-    if (hasDomain) members.push({ key: DOMAIN, qual: null })
+    if (hasDomain) {
+      const domain = { key: DOMAIN, qual: null }
+      if (domainLast) members.push(domain)
+      else members.unshift(domain)
+    }
     return { axis, members }
   })
 
@@ -482,7 +513,7 @@ export function buildPivot(
   if (periodOnColumns && config.dropSparsePeriods !== false) {
     periods = pruneSparsePeriods(model, facts, periods)
   }
-  const colCombos = memberCombos(facts, colDimAxes, tree.indexOf)
+  const colCombos = memberCombos(facts, colDimAxes, tree.indexOf, true)
 
   const columns: PivotColumn[] = []
   const columnSegs: string[][] = []
@@ -513,7 +544,7 @@ export function buildPivot(
   }
 
   const factfulConcepts = new Set(facts.map((f) => f.element))
-  const rowCombos = memberCombos(facts, rowDimAxes, tree.indexOf)
+  const rowCombos = memberCombos(facts, rowDimAxes, tree.indexOf, false)
   const combosForConcept = (element: string): MemberCombo[] => {
     if (rowDimAxes.length === 0) return rowCombos // single domain combo
     return rowCombos.filter((combo) =>
@@ -560,8 +591,11 @@ export function buildPivot(
   const emitConcept = (id: string, depth: number): void => {
     const el = elementOf(model, id)
     for (const combo of combosForConcept(id)) {
+      // The domain-total combo (no members) keys by the element alone — it's the
+      // concept's own total row, identical to the undimensioned case. Only member
+      // sub-rows carry the dimensional signature in their key.
       rows.push({
-        key: combo.sig ? `${id}␟${combo.sig}` : id,
+        key: combo.members.length ? `${id}␟${combo.sig}` : id,
         element: el,
         depth: depth + (combo.members.length ? 1 : 0),
         header: false,
@@ -629,8 +663,15 @@ export function reportSections(model: NormalizedReport): Array<{ id: string; tit
   return buildPivots(model).map((p) => ({ id: p.ib.id, title: p.title }))
 }
 
-/** Pivot every section of a report, in canonical block order. */
-export function buildPivots(model: NormalizedReport): PivotTable[] {
+/**
+ * Pivot every section of a report, in canonical block order. `configFor` may
+ * transform each section's default config before it is built — e.g. to apply a
+ * "dimensions as rows / columns" toggle across the whole report.
+ */
+export function buildPivots(
+  model: NormalizedReport,
+  configFor?: (ib: InformationBlock, defaultConfig: PivotConfig) => PivotConfig
+): PivotTable[] {
   const order = (ib: InformationBlock): number => {
     if (ib.structureId) {
       const s = model.structures.find((x) => x.id === ib.structureId)
@@ -640,5 +681,9 @@ export function buildPivots(model: NormalizedReport): PivotTable[] {
   }
   return [...model.informationBlocks]
     .sort((a, b) => order(a) - order(b) || a.blockType.localeCompare(b.blockType))
-    .map((ib) => buildPivot(model, ib))
+    .map((ib) =>
+      configFor
+        ? buildPivot(model, ib, configFor(ib, defaultPivotConfig(model, ib)))
+        : buildPivot(model, ib)
+    )
 }

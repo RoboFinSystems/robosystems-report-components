@@ -4,9 +4,10 @@ import type {
   ElementInfo,
   Fact,
   NormalizedReport,
+  PeriodInfo,
   PivotTable,
 } from '../src/model'
-import { buildPivot, defaultPivotConfig } from '../src/pivot'
+import { buildPivot, defaultPivotConfig, pivotDimensionsOn } from '../src/pivot'
 
 // A compact Statement-of-Equity-shaped section built from real NVDA FY2026
 // numbers: `us-gaap:StockholdersEquity` reported once per equity component
@@ -186,18 +187,25 @@ function cell(p: PivotTable, rowKey: string, end: string, leafLabel: string): nu
   return row && idx >= 0 ? (row.cells[idx]?.value ?? null) : null
 }
 
+// Value at a period column for a row identified by key (dims-as-rows mode).
+function rowCellAt(p: PivotTable, rowKey: string, end: string): number | null {
+  const row = rowByKey(p, rowKey)
+  const idx = p.columns.findIndex((c) => c.period?.end === end)
+  return row && idx >= 0 ? (row.cells[idx]?.value ?? null) : null
+}
+
 describe('defaultPivotConfig — derives roles from the section aspects', () => {
   const config = defaultPivotConfig(report, report.informationBlocks[0])
-  it('puts concept on rows, period + the multi-member axis on columns', () => {
-    expect(config.rows).toEqual(['concept'])
-    expect(config.columns).toEqual(['period', `dim:${AXIS}`])
+  it('puts concept + the multi-member axis on rows, period on columns', () => {
+    expect(config.rows).toEqual(['concept', `dim:${AXIS}`])
+    expect(config.columns).toEqual(['period'])
   })
   it('makes the reporting entity a slicer', () => {
     expect(config.slicers).toContain('entity')
   })
 })
 
-describe('buildPivot — the equity hypercube (default view)', () => {
+describe('buildPivot — the equity hypercube (default: dimensions as rows)', () => {
   const p = buildPivot(report, report.informationBlocks[0])
 
   it('renders the entity as a slicer bar', () => {
@@ -205,38 +213,33 @@ describe('buildPivot — the equity hypercube (default view)', () => {
     expect(entity?.valueLabel).toBe('NVIDIA CORP')
   })
 
-  it('lays members out as columns, nested under each period (+ a Total)', () => {
-    // 2 periods × (4 members + Total) = 10 leaf columns.
-    expect(p.columns).toHaveLength(10)
-    // Top header level = the two period-ends, each spanning 5 member sub-columns.
-    expect(p.columnHeaders[0].map((h) => h.span)).toEqual([5, 5])
-    // Second level = member labels in domain (presentation) order, Total last.
-    expect(p.columnHeaders[1].slice(0, 5).map((h) => h.label)).toEqual([
-      'Common Stock',
-      'Additional Paid-in Capital',
-      'Retained Earnings',
-      'AOCI',
-      'Total',
-    ])
+  it('keeps columns as the two period-ends only', () => {
+    expect(p.columns.map((c) => c.period?.end)).toEqual(['2025-01-26', '2026-01-25'])
   })
 
-  it('keeps each dimensional fact in its own cell — no collision', () => {
-    // The four component values AND the consolidated total coexist at 2025-01-26.
-    expect(cell(p, SE, '2025-01-26', 'Common Stock')).toBe(24000000)
-    expect(cell(p, SE, '2025-01-26', 'Additional Paid-in Capital')).toBe(11237000000)
-    expect(cell(p, SE, '2025-01-26', 'Retained Earnings')).toBe(68038000000)
-    expect(cell(p, SE, '2025-01-26', 'AOCI')).toBe(28000000)
-    expect(cell(p, SE, '2025-01-26', 'Total')).toBe(79327000000)
-    // The components foot to the total.
-    const sum = 24000000 + 11237000000 + 68038000000 + 28000000
-    expect(sum).toBe(79327000000)
+  it('expands each concept into a total row + indented member sub-rows', () => {
+    // The concept (domain) total comes first, its members indented below it.
+    expect(rowCellAt(p, SE, '2025-01-26')).toBe(79327000000)
+    const reRow = rowByKey(p, `${SE}␟${AXIS}=${members.re}`)
+    expect(reRow?.depth).toBeGreaterThan(rowByKey(p, SE)?.depth ?? 0)
+    // The member sub-row label is just the member (the concept row heads it).
+    expect(reRow?.members.map((m) => m.memberLabel)).toEqual(['Retained Earnings'])
   })
 
-  it('routes net income into the retained-earnings column only', () => {
-    expect(cell(p, NI, '2026-01-25', 'Retained Earnings')).toBe(120067000000)
-    expect(cell(p, NI, '2026-01-25', 'Total')).toBe(120067000000)
-    expect(cell(p, NI, '2026-01-25', 'Common Stock')).toBeNull()
-    expect(cell(p, NI, '2025-01-26', 'Total')).toBeNull()
+  it('keeps each dimensional fact in its own row — no collision', () => {
+    // The consolidated total and every component coexist at 2025-01-26.
+    expect(rowCellAt(p, SE, '2025-01-26')).toBe(79327000000)
+    expect(rowCellAt(p, `${SE}␟${AXIS}=${members.common}`, '2025-01-26')).toBe(24000000)
+    expect(rowCellAt(p, `${SE}␟${AXIS}=${members.apic}`, '2025-01-26')).toBe(11237000000)
+    expect(rowCellAt(p, `${SE}␟${AXIS}=${members.re}`, '2025-01-26')).toBe(68038000000)
+    expect(rowCellAt(p, `${SE}␟${AXIS}=${members.aoci}`, '2025-01-26')).toBe(28000000)
+  })
+
+  it('routes net income into a retained-earnings sub-row only', () => {
+    expect(rowCellAt(p, NI, '2026-01-25')).toBe(120067000000)
+    expect(rowCellAt(p, `${NI}␟${AXIS}=${members.re}`, '2026-01-25')).toBe(120067000000)
+    // Net income has no common-stock breakdown, so no such row exists.
+    expect(rowByKey(p, `${NI}␟${AXIS}=${members.common}`)).toBeUndefined()
   })
 
   it('emits the abstract concept as a header row', () => {
@@ -255,33 +258,38 @@ describe('buildPivot — the equity hypercube (default view)', () => {
     expect(p.scale.label).toBe('millions')
     expect(p.scale.caption).toBe('In millions, except per-share amounts')
   })
+})
+
+describe('buildPivot — toggle: dimensions as columns (the matrix)', () => {
+  const p = buildPivot(
+    report,
+    report.informationBlocks[0],
+    pivotDimensionsOn(defaultPivotConfig(report, report.informationBlocks[0]), 'columns')
+  )
+
+  it('lays members out as columns, nested under each period (+ a Total)', () => {
+    // 2 periods × (4 members + Total) = 10 leaf columns.
+    expect(p.columns).toHaveLength(10)
+    expect(p.columnHeaders[0].map((h) => h.span)).toEqual([5, 5])
+    expect(p.columnHeaders[1].slice(0, 5).map((h) => h.label)).toEqual([
+      'Common Stock',
+      'Additional Paid-in Capital',
+      'Retained Earnings',
+      'AOCI',
+      'Total',
+    ])
+  })
+
+  it('keeps each dimensional fact in its own cell — no collision', () => {
+    expect(cell(p, SE, '2025-01-26', 'Common Stock')).toBe(24000000)
+    expect(cell(p, SE, '2025-01-26', 'Retained Earnings')).toBe(68038000000)
+    expect(cell(p, SE, '2025-01-26', 'Total')).toBe(79327000000)
+  })
 
   it('does not rescale the EPS row itself (its fact stays 4.93)', () => {
     const eps = rowByKey(p, EPS)
     const idx = colIndex(p, '2026-01-25', 'Total')
     expect(eps?.cells[idx]?.value).toBe(4.93)
-  })
-})
-
-describe('buildPivot — configurable: move the axis to rows', () => {
-  const p = buildPivot(report, report.informationBlocks[0], {
-    rows: ['concept', `dim:${AXIS}`],
-    columns: ['period'],
-    slicers: ['entity'],
-    scale: 'auto',
-    showAbstracts: true,
-  })
-
-  it('columns collapse back to periods only', () => {
-    expect(p.columns.map((c) => c.period?.end)).toEqual(['2025-01-26', '2026-01-25'])
-  })
-
-  it('StockholdersEquity expands into per-member sub-rows', () => {
-    const reRow = rowByKey(p, `${SE}␟${AXIS}=${members.re}`)
-    expect(reRow).toBeDefined()
-    expect(reRow?.depth).toBeGreaterThan(rowByKey(p, SE)?.depth ?? 0)
-    const idx = p.columns.findIndex((c) => c.period?.end === '2025-01-26')
-    expect(reRow?.cells[idx]?.value).toBe(68038000000)
   })
 })
 

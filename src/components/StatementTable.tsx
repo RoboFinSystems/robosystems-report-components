@@ -264,19 +264,27 @@ export function StatementTable({
                           }
                         : {}),
                     }
+                    // No fact for this coordinate → blank; a fact that is null or
+                    // a genuine $0 (Commitments & Contingencies, zero balance) →
+                    // an em-dash; anything else → the formatted value.
+                    const display = isText
+                      ? cell.textValue
+                      : cell.fact === null
+                        ? ''
+                        : cell.value === 0
+                          ? '—'
+                          : formatValue(cell.value, {
+                              numericKind: kind,
+                              symbol: cellSymbol(unit),
+                              scaleFactor: scale.factor,
+                            })
                     return (
                       <td
                         key={columns[i].key}
                         style={numStyle}
                         onClick={clickable ? () => onCellClick?.(row, i) : undefined}
                       >
-                        {isText
-                          ? cell.textValue
-                          : formatValue(cell.value, {
-                              numericKind: kind,
-                              symbol: cellSymbol(unit),
-                              scaleFactor: scale.factor,
-                            })}
+                        {display}
                       </td>
                     )
                   })}
@@ -290,8 +298,13 @@ export function StatementTable({
   )
 }
 
-/** A concept label, suffixed with its member when the row is a dimensional breakdown. */
+/**
+ * A row's label. A dimensional breakdown row (members on rows) shows just its
+ * member(s) — it sits indented under its concept's total row, which supplies the
+ * concept name — so the reader gets `Stockholders' Equity` / `· Common Stock`
+ * rather than the concept repeated on every line.
+ */
 function rowLabel(row: PivotRow): string {
   if (!row.members.length) return row.element.label
-  return `${row.element.label} — ${row.members.map((m) => m.memberLabel).join(', ')}`
+  return row.members.map((m) => m.memberLabel).join(' · ')
 }
