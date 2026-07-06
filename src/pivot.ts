@@ -225,11 +225,20 @@ export function defaultPivotConfig(model: NormalizedReport, ib: InformationBlock
 
 // ── Columns ─────────────────────────────────────────────────────────────────
 
+/** Fraction of the densest period a column must reach to count as a real one. */
+const PERIOD_DENSITY_FRACTION = 0.2
+
 /**
- * Drop lone-straggler periods: those with fewer than two populated facts, when
- * some period has four or more. Conservative on purpose — a real comparative
- * period repeats many line items and always clears the bar, so this only removes
- * noise like an equity opening balance leaked into the balance-sheet factset.
+ * Drop "incomplete" period columns — incidental context dates that aren't real
+ * reporting periods: a transaction date (a single fact), a prior-year opening
+ * balance, a stub period. The SEC/Arelle renderer selects reporting periods by
+ * type + recency (most-recent instants aligned to the fiscal year-end for a
+ * balance sheet, day-count-classified durations for income); we approximate that
+ * with density, which separates the same set here — a real comparative repeats
+ * most line items and clears the bar, while an incidental date is sparse. Keep a
+ * period whose populated-fact count is at least `PERIOD_DENSITY_FRACTION` of the
+ * densest (min 2), when the densest is non-trivial. Metadata-safe: cells still
+ * own their own facts, so a dropped column can never mislabel a kept one.
  */
 function pruneSparsePeriods(
   model: NormalizedReport,
@@ -243,8 +252,9 @@ function pruneSparsePeriods(
     if (end && populated) count.set(end, (count.get(end) ?? 0) + 1)
   }
   const max = Math.max(0, ...count.values())
-  if (max < 4) return periods
-  return periods.filter((p) => (count.get(p.end) ?? 0) >= 2)
+  if (max < 5) return periods
+  const threshold = Math.max(2, max * PERIOD_DENSITY_FRACTION)
+  return periods.filter((p) => (count.get(p.end) ?? 0) >= threshold)
 }
 
 /** Period columns keyed by end date, preferring a duration as the representative. */

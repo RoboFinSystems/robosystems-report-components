@@ -361,3 +361,74 @@ describe('buildPivot — a statement owns only its hypercube axes', () => {
     expect(rev?.cells[0]?.value).toBe(100)
   })
 })
+
+describe('buildPivot — incomplete period columns are dropped', () => {
+  // A balance-sheet-shaped section: two dense reporting instants (2024/2023
+  // year-ends) plus incidental context dates — a prior-year opening balance and a
+  // lone transaction date — which are not real reporting periods. The opening
+  // date clears the absolute floor (3 facts) but not the density bar, so it must
+  // still be dropped, matching how the SEC renderer keeps only the reporting
+  // periods.
+  const elements: Record<string, ElementInfo> = {}
+  const facts: Fact[] = []
+  const mk = (concept: string, periodId: string): void => {
+    if (!elements[concept]) {
+      elements[concept] = el(concept, {
+        monetary: true,
+        periodType: 'instant',
+        numericKind: 'monetary',
+      })
+    }
+    facts.push({
+      id: `bf${fid++}`,
+      element: concept,
+      period: periodId,
+      unit: 'u',
+      entity: 'e',
+      factSet: 'fs',
+      value: 1000,
+      decimals: '-3',
+    })
+  }
+  for (let i = 0; i < 20; i++) {
+    mk(`x:Line${i}`, 'cur')
+    mk(`x:Line${i}`, 'prior')
+  }
+  for (let i = 0; i < 3; i++) mk(`x:Line${i}`, 'opening') // 3 facts (< 20% of 20)
+  mk('x:Line0', 'stub') // 1 fact
+  const inst = (id: string, d: string): PeriodInfo => ({
+    id,
+    type: 'instant',
+    instant: d,
+    startDate: null,
+    endDate: null,
+    end: d,
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'Co', legalName: null, country: null },
+    informationBlocks: [
+      { id: 'bs', blockType: 'balance_sheet', factSet: 'fs', label: 'BS', structureId: 'bs' },
+    ],
+    structures: [
+      { id: 'bs', blockType: 'balance_sheet', roleUri: null, structureName: 'BS', order: 0 },
+    ],
+    facts,
+    elements,
+    periods: {
+      cur: inst('cur', '2024-12-31'),
+      prior: inst('prior', '2023-12-31'),
+      opening: inst('opening', '2022-12-31'),
+      stub: inst('stub', '2023-03-09'),
+    },
+    units: { u: { id: 'u', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+    calcAssociations: [],
+    presAssociations: [],
+  }
+
+  it('keeps the two dense reporting instants, drops the opening + transaction dates', () => {
+    const p = buildPivot(model, model.informationBlocks[0])
+    expect(p.columns.map((c) => c.period?.end)).toEqual(['2023-12-31', '2024-12-31'])
+  })
+})
