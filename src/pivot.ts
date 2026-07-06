@@ -309,8 +309,8 @@ interface MemberCombo {
  * ordered by each member's presentation position. The union across periods, so
  * the grid is regular (a member absent in one period shows an empty cell rather
  * than a ragged set). `domainLast` places the domain total (the consolidated,
- * memberless combo) after its members (columns: a trailing "Total" column) or
- * before them (rows: the concept row heads its indented member breakdown).
+ * memberless combo) after its members — a trailing "Total" column, or on rows the
+ * concept's summing total below its member breakdown.
  */
 function memberCombos(
   facts: Fact[],
@@ -544,7 +544,10 @@ export function buildPivot(
   }
 
   const factfulConcepts = new Set(facts.map((f) => f.element))
-  const rowCombos = memberCombos(facts, rowDimAxes, tree.indexOf, false)
+  // Domain total last on rows too: member rows list first, then the concept's
+  // own (memberless) total below and outdented — the accounting "components then
+  // total" layout, so the total reads as the sum of the members above it.
+  const rowCombos = memberCombos(facts, rowDimAxes, tree.indexOf, true)
   const combosForConcept = (element: string): MemberCombo[] => {
     if (rowDimAxes.length === 0) return rowCombos // single domain combo
     return rowCombos.filter((combo) =>

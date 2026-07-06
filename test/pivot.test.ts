@@ -217,13 +217,16 @@ describe('buildPivot — the equity hypercube (default: dimensions as rows)', ()
     expect(p.columns.map((c) => c.period?.end)).toEqual(['2025-01-26', '2026-01-25'])
   })
 
-  it('expands each concept into a total row + indented member sub-rows', () => {
-    // The concept (domain) total comes first, its members indented below it.
+  it('expands each concept into indented member sub-rows above its total', () => {
     expect(rowCellAt(p, SE, '2025-01-26')).toBe(79327000000)
     const reRow = rowByKey(p, `${SE}␟${AXIS}=${members.re}`)
     expect(reRow?.depth).toBeGreaterThan(rowByKey(p, SE)?.depth ?? 0)
-    // The member sub-row label is just the member (the concept row heads it).
+    // The member sub-row label is just the member (the total row names the concept).
     expect(reRow?.members.map((m) => m.memberLabel)).toEqual(['Retained Earnings'])
+    // Accounting order: members list first, the concept total sums below them.
+    const totalIdx = p.rows.findIndex((r) => r.key === SE)
+    const memberIdx = p.rows.findIndex((r) => r.key === `${SE}␟${AXIS}=${members.re}`)
+    expect(totalIdx).toBeGreaterThan(memberIdx)
   })
 
   it('keeps each dimensional fact in its own row — no collision', () => {
