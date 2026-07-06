@@ -590,7 +590,25 @@ export function buildPivot(
   const rows: PivotRow[] = []
   const emitConcept = (id: string, depth: number): void => {
     const el = elementOf(model, id)
-    for (const combo of combosForConcept(id)) {
+    const combos = combosForConcept(id)
+    if (!combos.length) return
+    // With dimensions on rows, a concept's own total row heads its indented member
+    // breakdown and supplies the concept name. When the concept has *no*
+    // consolidated total (only per-member facts — common in detail disclosures),
+    // emit a valueless heading row so the members aren't orphaned member-only
+    // labels (`CREM Loan · Mortgages` with no idea what is being measured).
+    if (combos.every((c) => c.members.length > 0)) {
+      rows.push({
+        key: id,
+        element: el,
+        depth,
+        header: false,
+        isSubtotal: subtotals.has(id),
+        members: [],
+        cells: columns.map(() => ({ value: null, fact: null, textValue: null })),
+      })
+    }
+    for (const combo of combos) {
       // The domain-total combo (no members) keys by the element alone — it's the
       // concept's own total row, identical to the undimensioned case. Only member
       // sub-rows carry the dimensional signature in their key.

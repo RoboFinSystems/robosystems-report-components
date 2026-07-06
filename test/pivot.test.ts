@@ -440,3 +440,88 @@ describe('buildPivot — incomplete period columns are dropped', () => {
     expect(p.columns.map((c) => c.period?.end)).toEqual(['2023-12-31', '2024-12-31'])
   })
 })
+
+describe('buildPivot — a member-only concept gets a heading row (dims as rows)', () => {
+  // A detail disclosure: a concept reported only per-member, with no consolidated
+  // total. Its member rows must not be orphaned "member-only" labels — a valueless
+  // concept heading supplies the concept name above them.
+  const AXIS2 = 'us-gaap:DebtInstrumentAxis'
+  const DEBT = 'us-gaap:DebtInstrumentFaceAmount'
+  const LINES = 'us-gaap:DebtInstrumentLineItems'
+  const CREM = 'us-gaap:CremLoanMember'
+  const NOTE = 'us-gaap:PromissoryNoteMember'
+  const seg = (m: string): DimensionQualifier => ({
+    axis: AXIS2,
+    member: m,
+    axisLabel: 'Debt Instrument',
+    memberLabel: m.split(':').pop() ?? m,
+    explicit: true,
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'Co', legalName: null, country: null },
+    informationBlocks: [{ id: 'd', blockType: '', factSet: 'fs', label: 'Debt', structureId: 'd' }],
+    structures: [{ id: 'd', blockType: '', roleUri: null, structureName: 'Debt', order: 0 }],
+    facts: [
+      {
+        id: 'd1',
+        element: DEBT,
+        period: 'p',
+        unit: 'u',
+        entity: 'e',
+        factSet: 'fs',
+        value: 58700,
+        decimals: '-3',
+        dimensions: [seg(CREM)],
+      },
+      {
+        id: 'd2',
+        element: DEBT,
+        period: 'p',
+        unit: 'u',
+        entity: 'e',
+        factSet: 'fs',
+        value: 8000,
+        decimals: '-3',
+        dimensions: [seg(NOTE)],
+      },
+    ],
+    elements: {
+      [LINES]: el(LINES, { abstract: true }),
+      [DEBT]: el(DEBT, { monetary: true, periodType: 'instant', numericKind: 'monetary' }),
+      [AXIS2]: el(AXIS2, { abstract: true }),
+      [CREM]: el(CREM, { abstract: true }),
+      [NOTE]: el(NOTE, { abstract: true }),
+    },
+    periods: {
+      p: {
+        id: 'p',
+        type: 'instant',
+        instant: '2024-12-31',
+        startDate: null,
+        endDate: null,
+        end: '2024-12-31',
+      },
+    },
+    units: { u: { id: 'u', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+    calcAssociations: [],
+    presAssociations: [
+      { parent: LINES, child: AXIS2, order: 0, role: null, structure: 'd' },
+      { parent: LINES, child: DEBT, order: 1, role: null, structure: 'd' },
+      { parent: AXIS2, child: CREM, order: 1, role: null, structure: 'd' },
+      { parent: AXIS2, child: NOTE, order: 2, role: null, structure: 'd' },
+    ],
+  }
+
+  it('emits a valueless concept heading above the member sub-rows', () => {
+    const p = buildPivot(model, model.informationBlocks[0])
+    const heading = rowByKey(p, DEBT)
+    expect(heading).toBeDefined()
+    expect(heading?.members).toEqual([])
+    expect(heading?.cells.every((c) => c.value === null && c.fact === null)).toBe(true)
+    const crem = rowByKey(p, `${DEBT}␟${AXIS2}=${CREM}`)
+    expect(crem?.cells[0]?.value).toBe(58700)
+    expect(crem?.depth).toBeGreaterThan(heading?.depth ?? 0)
+  })
+})
