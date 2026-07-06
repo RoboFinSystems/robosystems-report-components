@@ -183,12 +183,16 @@ function presentationTree(model: NormalizedReport, structureId: string): Present
   }
   const roots = [...froms].filter((f) => !tos.has(f)).sort((a, b) => rootKey(a) - rootKey(b))
 
+  // Keyed by *local name* so member ordering matches a dimension qualifier's
+  // member regardless of prefix (a company member `mrmd:RetailMember` reaches the
+  // renderer as the bare local `RetailMember`).
   const indexOf = new Map<string, number>()
   const seen = new Set<string>()
   const pre = (node: string): void => {
     if (seen.has(node)) return
     seen.add(node)
-    if (!indexOf.has(node)) indexOf.set(node, indexOf.size)
+    const ln = localName(node)
+    if (!indexOf.has(ln)) indexOf.set(ln, indexOf.size)
     for (const child of childrenOf.get(node) ?? []) pre(child)
   }
   for (const root of roots) pre(root)
@@ -370,8 +374,8 @@ function memberCombos(
     const members = [...byMember.entries()]
       .map(([key, qual]) => ({ key, qual }))
       .sort((a, b) => {
-        const ao = a.qual?.member ? (order.get(a.qual.member) ?? Infinity) : Infinity
-        const bo = b.qual?.member ? (order.get(b.qual.member) ?? Infinity) : Infinity
+        const ao = a.qual?.member ? (order.get(localName(a.qual.member)) ?? Infinity) : Infinity
+        const bo = b.qual?.member ? (order.get(localName(b.qual.member)) ?? Infinity) : Infinity
         return ao - bo || (a.qual?.memberLabel ?? a.key).localeCompare(b.qual?.memberLabel ?? b.key)
       })
     if (hasDomain) {

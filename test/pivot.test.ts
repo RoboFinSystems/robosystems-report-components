@@ -602,3 +602,76 @@ describe('buildPivot — a Details disclosure scopes to its declared members', (
     expect(p.rows.some((r) => r.members.some((m) => m.member === CREM))).toBe(false)
   })
 })
+
+describe('buildPivot — members follow presentation order, not alphabetical', () => {
+  // Revenue disaggregation with company-namespaced members. The qualifier stores
+  // the bare local name while the presentation node is prefixed; ordering must
+  // still match (Retail, Wholesale, Other — the filer's order), not fall back to
+  // alphabetical (Other, Retail, Wholesale).
+  const AXIS = 'us-gaap:ProductOrServiceAxis'
+  const REV = 'us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax'
+  const LINES = 'us-gaap:DisaggregationOfRevenueLineItems'
+  const RETAIL = 'ProductSalesRetailMember' // bare local, as the adapter emits for company members
+  const WHOLESALE = 'ProductSalesWholesaleMember'
+  const OTHER = 'OtherRevenueMember'
+  const m = (member: string, label: string): DimensionQualifier => ({
+    axis: AXIS,
+    member,
+    axisLabel: 'Product or Service',
+    memberLabel: label,
+    explicit: true,
+  })
+  const rev = (member: string | null, v: number): Fact => ({
+    id: `rv${fid++}`,
+    element: REV,
+    period: 'p',
+    unit: 'u',
+    entity: 'e',
+    factSet: 'fs',
+    value: v,
+    decimals: '-3',
+    dimensions: member ? [m(member, member.replace(/Member$/, ''))] : undefined,
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'Co', legalName: null, country: null },
+    informationBlocks: [{ id: 'd', blockType: '', factSet: 'fs', label: 'Rev', structureId: 'd' }],
+    structures: [{ id: 'd', blockType: '', roleUri: null, structureName: 'Revenue', order: 0 }],
+    facts: [rev(null, 37906), rev(RETAIL, 20730), rev(WHOLESALE, 16786), rev(OTHER, 390)],
+    elements: {
+      [LINES]: el(LINES, { abstract: true }),
+      [REV]: el(REV, { monetary: true, periodType: 'duration', numericKind: 'monetary' }),
+      [AXIS]: el(AXIS, { abstract: true }),
+    },
+    periods: {
+      p: {
+        id: 'p',
+        type: 'duration',
+        instant: null,
+        startDate: '2026-01-01',
+        endDate: '2026-03-31',
+        end: '2026-03-31',
+      },
+    },
+    units: { u: { id: 'u', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+    calcAssociations: [],
+    // Presentation declares members prefixed, in the filer's order: Retail, Wholesale, Other.
+    presAssociations: [
+      { parent: LINES, child: AXIS, order: 0, role: null, structure: 'd' },
+      { parent: LINES, child: REV, order: 1, role: null, structure: 'd' },
+      { parent: AXIS, child: `co:${RETAIL}`, order: 1, role: null, structure: 'd' },
+      { parent: AXIS, child: `co:${WHOLESALE}`, order: 2, role: null, structure: 'd' },
+      { parent: AXIS, child: `co:${OTHER}`, order: 3, role: null, structure: 'd' },
+    ],
+  }
+
+  it('orders member rows by the presentation network', () => {
+    const p = buildPivot(model, model.informationBlocks[0])
+    const idx = (member: string): number =>
+      p.rows.findIndex((r) => r.key === `${REV}␟${AXIS}=${member}`)
+    expect(idx(RETAIL)).toBeGreaterThanOrEqual(0)
+    expect(idx(RETAIL)).toBeLessThan(idx(WHOLESALE))
+    expect(idx(WHOLESALE)).toBeLessThan(idx(OTHER))
+  })
+})
