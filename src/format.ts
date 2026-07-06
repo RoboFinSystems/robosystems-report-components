@@ -87,21 +87,33 @@ export interface ValueFormat {
  * Format a fact value for display: accounting style (negatives in parentheses,
  * em-dash for absent), the fact's own currency symbol (never a hard-coded `$`),
  * and the section scale — with per-share amounts and share counts never rescaled
- * (an EPS of 4.93 stays 4.93 under "in millions").
+ * (an EPS of 4.93 stays 4.93 under "in millions"). A `percent` fact stores a
+ * decimal fraction, so it is scaled ×100 and suffixed with `%` (0.10 → 10%); a
+ * `pure` fact is a bare ratio, shown as a plain decimal (no `%`).
  */
 export function formatValue(value: number | null | undefined, fmt: ValueFormat = {}): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—'
   const kind = fmt.numericKind ?? 'monetary'
   const scale = kind === 'monetary' ? (fmt.scaleFactor ?? 1) : 1
-  const scaled = value / scale
-  const fracDigits =
-    kind === 'perShare' ? 2 : kind === 'monetary' ? (scale > 1 ? 0 : 2) : kind === 'percent' ? 1 : 0
+  const scaled = kind === 'percent' ? value * 100 : value / scale
+
+  let minFrac = 0
+  let maxFrac = 0
+  if (kind === 'perShare') {
+    minFrac = maxFrac = 2
+  } else if (kind === 'monetary') {
+    minFrac = maxFrac = scale > 1 ? 0 : 2
+  } else if (kind === 'percent') {
+    maxFrac = 2
+  } else if (kind === 'pure') {
+    maxFrac = 4
+  }
+
   const abs = Math.abs(scaled).toLocaleString('en-US', {
-    minimumFractionDigits: fracDigits,
-    maximumFractionDigits: fracDigits,
+    minimumFractionDigits: minFrac,
+    maximumFractionDigits: maxFrac,
   })
   const symbol = kind === 'monetary' || kind === 'perShare' ? (fmt.symbol ?? '') : ''
   const suffix = kind === 'percent' ? '%' : ''
-  const body = `${symbol}${abs}${suffix}`
-  return scaled < 0 ? `${symbol}(${abs}${suffix})` : body
+  return scaled < 0 ? `${symbol}(${abs}${suffix})` : `${symbol}${abs}${suffix}`
 }

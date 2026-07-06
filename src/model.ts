@@ -22,7 +22,14 @@ export type BalanceType = 'debit' | 'credit'
  * millions"); percentages render with a `%` suffix. Absent → the formatter falls
  * back to `monetary ? 'monetary' : 'other'`.
  */
-export type NumericKind = 'monetary' | 'perShare' | 'shares' | 'percent' | 'integer' | 'other'
+export type NumericKind =
+  | 'monetary'
+  | 'perShare'
+  | 'shares'
+  | 'percent'
+  | 'pure'
+  | 'integer'
+  | 'other'
 
 /** A reportable concept (a taxonomy element). */
 export interface ElementInfo {

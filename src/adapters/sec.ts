@@ -207,7 +207,10 @@ function deriveNumericKind(row: Record<string, unknown>): NumericKind | undefine
   const itemType = str(row, 'item_type') ?? ''
   if (/perShareItemType/i.test(itemType)) return 'perShare'
   if (/sharesItemType/i.test(itemType) || bool(row, 'is_shares')) return 'shares'
-  if (/percentItemType|pureItemType/i.test(itemType)) return 'percent'
+  // A percentItemType stores a decimal fraction (0.10 → 10%); a pureItemType is a
+  // bare dimensionless ratio (2.5 debt-to-equity), NOT a percentage.
+  if (/percentItemType/i.test(itemType)) return 'percent'
+  if (/pureItemType/i.test(itemType)) return 'pure'
   if (/monetaryItemType/i.test(itemType)) return 'monetary'
   if (/integerItemType/i.test(itemType)) return 'integer'
   if (!bool(row, 'is_numeric')) return undefined
