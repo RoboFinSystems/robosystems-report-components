@@ -5,7 +5,7 @@
  */
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
-import type { AspectKey, NormalizedReport, PivotRow } from '../model'
+import type { NormalizedReport, PivotRow } from '../model'
 import { buildPivots, pivotDimensionsOn } from '../pivot'
 import { FactInspector } from './FactInspector'
 import { StatementTable } from './StatementTable'
@@ -23,8 +23,6 @@ interface Selection {
   rowKey: string
   columnIndex: number
 }
-
-const isDim = (k: AspectKey): boolean => k.startsWith('dim:')
 
 const styles: Record<string, CSSProperties> = {
   layout: {
@@ -48,34 +46,6 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--rs-text, #111827)',
   },
   panel: { position: 'sticky', top: '1rem' },
-  controls: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: '0.5rem',
-    marginBottom: '1rem',
-    fontSize: '0.8rem',
-  },
-  controlLabel: { color: 'var(--rs-muted, #6b7280)' },
-  segmented: {
-    display: 'inline-flex',
-    border: '1px solid var(--rs-border, #e5e7eb)',
-    borderRadius: '7px',
-    overflow: 'hidden',
-  },
-  segment: {
-    border: 'none',
-    padding: '0.25rem 0.7rem',
-    fontSize: '0.78rem',
-    cursor: 'pointer',
-    background: 'transparent',
-    color: 'var(--rs-text, #111827)',
-  },
-  segmentActive: {
-    background: 'var(--rs-primary-600, #2563eb)',
-    color: '#ffffff',
-    fontWeight: 600,
-  },
 }
 
 export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: ReportViewProps) {
@@ -85,9 +55,6 @@ export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: R
   const statements = useMemo(
     () => buildPivots(report, (_ib, cfg) => pivotDimensionsOn(cfg, dimAxis)),
     [report, dimAxis]
-  )
-  const hasDimensions = statements.some(
-    (s) => s.config.rows.some(isDim) || s.config.columns.some(isDim)
   )
 
   const selected = selection !== null ? statements[selection.statementIndex] : null
@@ -106,28 +73,6 @@ export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: R
         </header>
       ) : null}
 
-      {hasDimensions ? (
-        <div style={styles.controls}>
-          <span style={styles.controlLabel}>Dimensions</span>
-          <div style={styles.segmented} role="group" aria-label="Dimension placement">
-            {(['rows', 'columns'] as const).map((placement) => (
-              <button
-                key={placement}
-                type="button"
-                onClick={() => setPlacement(placement)}
-                aria-pressed={dimAxis === placement}
-                style={{
-                  ...styles.segment,
-                  ...(dimAxis === placement ? styles.segmentActive : {}),
-                }}
-              >
-                {placement === 'rows' ? 'As rows' : 'As columns'}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div
         style={{
           ...styles.layout,
@@ -140,6 +85,8 @@ export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: R
               key={statement.ib.id}
               table={statement}
               units={report.units}
+              dimensionPlacement={dimAxis}
+              onDimensionPlacementChange={setPlacement}
               selected={
                 selection && selection.statementIndex === statementIndex
                   ? { rowKey: selection.rowKey, columnIndex: selection.columnIndex }

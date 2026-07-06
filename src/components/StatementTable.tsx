@@ -25,6 +25,10 @@ export interface StatementTableProps {
   onCellClick?: (row: PivotRow, columnIndex: number) => void
   /** The currently-selected cell, highlighted. */
   selected?: { rowKey: string; columnIndex: number } | null
+  /** Current dimension placement — set with `onDimensionPlacementChange` to show the toggle. */
+  dimensionPlacement?: 'rows' | 'columns'
+  /** Setter for the dimension placement; when provided (and the section is dimensional), a rows/columns toggle renders below the slicers. */
+  onDimensionPlacementChange?: (placement: 'rows' | 'columns') => void
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -71,6 +75,33 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '0.68rem',
   },
   slicerValue: { fontWeight: 600 },
+  controls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    margin: '0 0 0.9rem',
+    fontSize: '0.8rem',
+  },
+  controlLabel: { color: 'var(--rs-muted, #6b7280)' },
+  segmented: {
+    display: 'inline-flex',
+    border: '1px solid var(--rs-border, #e5e7eb)',
+    borderRadius: '7px',
+    overflow: 'hidden',
+  },
+  segment: {
+    border: 'none',
+    padding: '0.25rem 0.7rem',
+    fontSize: '0.78rem',
+    cursor: 'pointer',
+    background: 'transparent',
+    color: 'var(--rs-text, #111827)',
+  },
+  segmentActive: {
+    background: 'var(--rs-primary-600, #2563eb)',
+    color: '#ffffff',
+    fontWeight: 600,
+  },
   scroll: { overflowX: 'auto' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' },
   th: {
@@ -127,9 +158,15 @@ export function StatementTable({
   units,
   onCellClick,
   selected = null,
+  dimensionPlacement,
+  onDimensionPlacementChange,
 }: StatementTableProps) {
   const { columns, rows, columnHeaders, scale } = table
   const totalCols = columns.length
+  const dimensional =
+    table.config.rows.some((k) => k.startsWith('dim:')) ||
+    table.config.columns.some((k) => k.startsWith('dim:'))
+  const showToggle = onDimensionPlacementChange != null && dimensional
 
   return (
     <section style={styles.wrap}>
@@ -147,6 +184,28 @@ export function StatementTable({
               <span style={styles.slicerValue}>{s.valueLabel}</span>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {showToggle ? (
+        <div style={styles.controls}>
+          <span style={styles.controlLabel}>Dimensions</span>
+          <div style={styles.segmented} role="group" aria-label="Dimension placement">
+            {(['rows', 'columns'] as const).map((placement) => (
+              <button
+                key={placement}
+                type="button"
+                onClick={() => onDimensionPlacementChange?.(placement)}
+                aria-pressed={dimensionPlacement === placement}
+                style={{
+                  ...styles.segment,
+                  ...(dimensionPlacement === placement ? styles.segmentActive : {}),
+                }}
+              >
+                {placement === 'rows' ? 'As rows' : 'As columns'}
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 
