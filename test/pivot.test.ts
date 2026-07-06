@@ -528,3 +528,77 @@ describe('buildPivot — a member-only concept gets a heading row (dims as rows)
     expect(crem?.depth).toBeGreaterThan(heading?.depth ?? 0)
   })
 })
+
+describe('buildPivot — a Details disclosure scopes to its declared members', () => {
+  // Sibling "DEBT, X (Details)" networks share one hypercube factset; each
+  // presentation declares only its own members. A fact for a member this section
+  // does not declare (a sibling disclosure's row) must be excluded.
+  const AXIS = 'us-gaap:DebtInstrumentAxis'
+  const RATE = 'us-gaap:DebtInstrumentInterestRateStatedPercentage'
+  const LINES = 'us-gaap:DebtInstrumentLineItems'
+  const DUQUOIN = 'mrmd:DuQuoinMetropolisMortgageMember'
+  const SOUTHPORTE = 'mrmd:SouthPorteBankMortgageMember'
+  const CREM = 'mrmd:CREMLoanMember' // belongs to a sibling network — not declared here
+  const inst = (m: string): DimensionQualifier => ({
+    axis: AXIS,
+    member: m,
+    axisLabel: 'Debt Instrument',
+    memberLabel: m.split(':').pop() ?? m,
+    explicit: true,
+  })
+  const rate = (m: string, v: number): Fact => ({
+    id: `r${fid++}`,
+    element: RATE,
+    period: 'p',
+    unit: 'u',
+    entity: 'e',
+    factSet: 'fs',
+    value: v,
+    decimals: 'INF',
+    dimensions: [inst(m)],
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'MARIMED INC.', legalName: null, country: null },
+    informationBlocks: [{ id: 'd', blockType: '', factSet: 'fs', label: 'Debt', structureId: 'd' }],
+    structures: [{ id: 'd', blockType: '', roleUri: null, structureName: 'Debt', order: 0 }],
+    facts: [rate(DUQUOIN, 0.1125), rate(SOUTHPORTE, 0.095), rate(CREM, 0.0843)],
+    elements: {
+      [LINES]: el(LINES, { abstract: true }),
+      [RATE]: el(RATE, { numericKind: 'percent', periodType: 'instant' }),
+      [AXIS]: el(AXIS, { abstract: true }),
+      [DUQUOIN]: el(DUQUOIN, { abstract: true }),
+      [SOUTHPORTE]: el(SOUTHPORTE, { abstract: true }),
+      [CREM]: el(CREM, { abstract: true }),
+    },
+    periods: {
+      p: {
+        id: 'p',
+        type: 'instant',
+        instant: '2026-03-31',
+        startDate: null,
+        endDate: null,
+        end: '2026-03-31',
+      },
+    },
+    units: { u: { id: 'u', measure: 'xbrli:pure', label: 'pure', symbol: null } },
+    calcAssociations: [],
+    // The presentation declares DuQuoin + SouthPorte, but NOT the CREM sibling.
+    presAssociations: [
+      { parent: LINES, child: AXIS, order: 0, role: null, structure: 'd' },
+      { parent: LINES, child: RATE, order: 1, role: null, structure: 'd' },
+      { parent: AXIS, child: DUQUOIN, order: 1, role: null, structure: 'd' },
+      { parent: AXIS, child: SOUTHPORTE, order: 2, role: null, structure: 'd' },
+    ],
+  }
+
+  it('excludes facts for members the presentation does not declare', () => {
+    const p = buildPivot(model, model.informationBlocks[0])
+    expect(rowByKey(p, `${RATE}␟${AXIS}=${DUQUOIN}`)?.cells[0]?.value).toBe(0.1125)
+    expect(rowByKey(p, `${RATE}␟${AXIS}=${SOUTHPORTE}`)?.cells[0]?.value).toBe(0.095)
+    // The CREM sibling's row is gone entirely.
+    expect(rowByKey(p, `${RATE}␟${AXIS}=${CREM}`)).toBeUndefined()
+    expect(p.rows.some((r) => r.members.some((m) => m.member === CREM))).toBe(false)
+  })
+})

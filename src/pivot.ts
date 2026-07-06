@@ -106,6 +106,39 @@ function presentationNodeLocals(model: NormalizedReport, structureId: string): S
   return out
 }
 
+interface PresentationScope {
+  /** Local names of every presentation node (axes, members, line items). */
+  declared: Set<string>
+  /** Whether the presentation lists explicit members (a closed member set). */
+  listsMembers: boolean
+}
+
+/**
+ * The section's dimensional scope. Many "Details" disclosures share one hypercube
+ * factset (every debt instrument, every segment), and are distinguished only by
+ * which *members* each network's presentation declares — so "DEBT, DuQuoin State
+ * Bank" and "DEBT, CREM Loan" pull from the same facts but must show different
+ * rows. When the presentation lists members, a fact whose member on any axis is
+ * not declared belongs to a sibling disclosure and is out of scope.
+ */
+function presentationScope(model: NormalizedReport, structureId: string): PresentationScope {
+  const declared = presentationNodeLocals(model, structureId)
+  let listsMembers = false
+  for (const l of declared) {
+    if (l.endsWith('Member')) {
+      listsMembers = true
+      break
+    }
+  }
+  return { declared, listsMembers }
+}
+
+/** Whether a dimension is in a section's declared scope (axis + member). */
+function dimensionInScope(scope: PresentationScope, d: DimensionQualifier): boolean {
+  if (!scope.declared.has(localName(d.axis))) return false
+  return !scope.listsMembers || d.member === null || scope.declared.has(localName(d.member))
+}
+
 // ── Presentation tree ───────────────────────────────────────────────────────
 
 interface PresentationTree {
@@ -197,14 +230,18 @@ const elementOf = (model: NormalizedReport, id: string): ElementInfo =>
 export function defaultPivotConfig(model: NormalizedReport, ib: InformationBlock): PivotConfig {
   const facts = sectionFacts(model, ib)
   const structure = structureForBlock(model, ib)
-  // Only axes this statement's presentation/hypercube declares belong in its view.
-  const declared = structure ? presentationNodeLocals(model, structure.id) : new Set<string>()
+  // Only the axes *and members* this section's presentation/hypercube declares
+  // belong in its view — so an axis that's a single declared member becomes a
+  // slicer, not a spurious multi-member breakdown from a sibling disclosure.
+  const scope = structure
+    ? presentationScope(model, structure.id)
+    : { declared: new Set<string>(), listsMembers: false }
   const membersByAxis = new Map<string, Set<string>>()
   let hasEntity = false
   for (const f of facts) {
     if (f.entity) hasEntity = true
     for (const d of f.dimensions ?? []) {
-      if (!declared.has(localName(d.axis))) continue
+      if (!dimensionInScope(scope, d)) continue
       const set = membersByAxis.get(d.axis) ?? new Set<string>()
       set.add(d.member ?? d.typedValue ?? DOMAIN)
       membersByAxis.set(d.axis, set)
@@ -499,12 +536,15 @@ export function buildPivot(
   const rowDimAxes = dimAxes(config.rows)
   const colDimAxes = dimAxes(config.columns)
   const allowedAxes = new Set([...rowDimAxes, ...colDimAxes, ...dimAxes(config.slicers)])
+  const scope: PresentationScope = structure
+    ? presentationScope(model, structure.id)
+    : { declared: new Set(), listsMembers: false }
 
-  // In-table facts: drop any carrying an axis this configuration doesn't place
-  // (a finer breakdown that belongs to a different pivot), so nothing is
-  // double-counted. Single-member slicer axes don't filter — they only label.
+  // In-table facts: drop any carrying an axis this configuration doesn't place,
+  // or (when the section lists members) a member its presentation doesn't declare
+  // — a sibling disclosure's row that shares this hypercube's factset.
   const facts = sectionFacts(model, ib).filter((f) =>
-    (f.dimensions ?? []).every((d) => allowedAxes.has(d.axis))
+    (f.dimensions ?? []).every((d) => allowedAxes.has(d.axis) && dimensionInScope(scope, d))
   )
 
   // Columns: period (outer) × member combos over the column axes (inner).
