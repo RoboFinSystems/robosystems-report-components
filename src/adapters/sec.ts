@@ -137,13 +137,17 @@ RETURN f.identifier AS fid, d.axis AS axis, d.member AS member,
 LIMIT 4000`
 
 // The presentation + calculation networks for one section, anchored on the
-// Structure PK. `association_type` is `Presentation` / `Calculation`.
+// Structure PK. `association_type` is `Presentation` / `Calculation`. Element
+// names + `is_abstract` come along so presentation-only nodes (abstract section
+// headers, which carry no facts) can be registered — without them the projection
+// can't tell a header from a concrete line and mis-orders it.
 const ASSOC_Q = `
 MATCH (s:Structure {identifier: $sid})-[:STRUCTURE_HAS_ASSOCIATION]->(a:Association),
       (a)-[:ASSOCIATION_HAS_FROM_ELEMENT]->(pe:Element),
       (a)-[:ASSOCIATION_HAS_TO_ELEMENT]->(ce:Element)
-RETURN a.association_type AS association_type, a.order_value AS order_value,
-       a.weight AS weight, pe.qname AS parent, ce.qname AS child`
+RETURN a.association_type AS association_type, a.order_value AS order_value, a.weight AS weight,
+       pe.qname AS parent, pe.name AS parent_name, pe.is_abstract AS parent_abstract,
+       ce.qname AS child, ce.name AS child_name, ce.is_abstract AS child_abstract`
 
 // ── Row helpers ────────────────────────────────────────────────────────────────
 
@@ -325,6 +329,32 @@ function accumulateElement(elements: Record<string, ElementInfo>, row: Record<st
   }
 }
 
+/**
+ * Register a presentation-network element that has no facts of its own — chiefly
+ * an abstract section header. Fact-bearing elements are already registered from
+ * the facts query and take precedence (this no-ops on existing keys); this fills
+ * in the abstract headers so the projection renders them as headers above their
+ * section rather than as empty concrete rows below it. Abstract labels drop the
+ * XBRL `Abstract` suffix (`OperatingExpensesAbstract` → `Operating Expenses`).
+ */
+function registerPresentationElement(
+  elements: Record<string, ElementInfo>,
+  qname: string | null,
+  name: string | null,
+  isAbstract: boolean
+): void {
+  if (!qname || elements[qname]) return
+  elements[qname] = {
+    id: qname,
+    qname,
+    label: name ? humanize(isAbstract ? name.replace(/Abstract$/, '') : name) : humanize(qname),
+    balance: null,
+    periodType: null,
+    abstract: isAbstract,
+    monetary: false,
+  }
+}
+
 function accumulatePeriod(periods: Record<string, PeriodInfo>, row: Record<string, unknown>) {
   const id = str(row, 'pid')
   if (!id || periods[id]) return
@@ -434,6 +464,21 @@ export async function fetchSecSection(
     const parent = str(row, 'parent')
     const child = str(row, 'child')
     if (!parent || !child) continue
+    // Register presentation-only elements (abstract section headers carry no
+    // facts, so the facts query never saw them). Fact-bearing elements are
+    // already registered and unaffected — registration no-ops on existing keys.
+    registerPresentationElement(
+      elements,
+      parent,
+      str(row, 'parent_name'),
+      bool(row, 'parent_abstract')
+    )
+    registerPresentationElement(
+      elements,
+      child,
+      str(row, 'child_name'),
+      bool(row, 'child_abstract')
+    )
     const order = num(row, 'order_value') ?? 0
     const type = str(row, 'association_type')?.toLowerCase()
     if (type === 'calculation') {
