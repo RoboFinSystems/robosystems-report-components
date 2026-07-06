@@ -82,6 +82,29 @@ function sectionFacts(model: NormalizedReport, ib: InformationBlock): Fact[] {
   return model.facts.filter((f) => f.factSet !== null && f.factSet === ib.factSet)
 }
 
+/** The local part of a qname (`us-gaap:Assets` → `Assets`). */
+function localName(qname: string): string {
+  return qname.includes(':') ? (qname.split(':').pop() as string) : qname
+}
+
+/**
+ * Local names of every element in a structure's presentation network. A section
+ * only *owns* the dimension axes declared here (its hypercube's axes appear as
+ * presentation nodes); facts carrying any other axis are a different table's
+ * breakdown — e.g. segment revenue tagged to the income-statement role — and must
+ * not be pivoted into this statement. Matched by local name so a company-specific
+ * axis (`nvda:FooAxis`) lines up regardless of prefix.
+ */
+function presentationNodeLocals(model: NormalizedReport, structureId: string): Set<string> {
+  const out = new Set<string>()
+  for (const a of model.presAssociations) {
+    if (a.structure !== structureId) continue
+    out.add(localName(a.parent))
+    out.add(localName(a.child))
+  }
+  return out
+}
+
 // ── Presentation tree ───────────────────────────────────────────────────────
 
 interface PresentationTree {
@@ -172,11 +195,15 @@ const elementOf = (model: NormalizedReport, id: string): ElementInfo =>
  */
 export function defaultPivotConfig(model: NormalizedReport, ib: InformationBlock): PivotConfig {
   const facts = sectionFacts(model, ib)
+  const structure = structureForBlock(model, ib)
+  // Only axes this statement's presentation/hypercube declares belong in its view.
+  const declared = structure ? presentationNodeLocals(model, structure.id) : new Set<string>()
   const membersByAxis = new Map<string, Set<string>>()
   let hasEntity = false
   for (const f of facts) {
     if (f.entity) hasEntity = true
     for (const d of f.dimensions ?? []) {
+      if (!declared.has(localName(d.axis))) continue
       const set = membersByAxis.get(d.axis) ?? new Set<string>()
       set.add(d.member ?? d.typedValue ?? DOMAIN)
       membersByAxis.set(d.axis, set)

@@ -284,3 +284,80 @@ describe('buildPivot — configurable: move the axis to rows', () => {
     expect(reRow?.cells[idx]?.value).toBe(68038000000)
   })
 })
+
+describe('buildPivot — a statement owns only its hypercube axes', () => {
+  // The income statement's factset also holds segment-revenue facts (tagged to
+  // the same role), but its presentation network declares no axis. Those facts
+  // must not turn the statement into a segment × geography grid.
+  const SEG = 'us-gaap:StatementBusinessSegmentsAxis'
+  const REV = 'us-gaap:Revenues'
+  const ISABS = 'us-gaap:IncomeStatementAbstract'
+  const seg = (member: string): DimensionQualifier => ({
+    axis: SEG,
+    member,
+    axisLabel: 'Segments',
+    memberLabel: member.split(':').pop() ?? member,
+    explicit: true,
+  })
+  const f = (value: number, dimensions?: DimensionQualifier[]): Fact => ({
+    id: `f${fid++}`,
+    element: REV,
+    period: 'p',
+    unit: 'u',
+    entity: 'e',
+    factSet: 'fs',
+    value,
+    decimals: '-6',
+    dimensions,
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'Co', legalName: null, country: null },
+    informationBlocks: [
+      {
+        id: 'is',
+        blockType: 'income_statement',
+        factSet: 'fs',
+        label: 'Income',
+        structureId: 'is',
+      },
+    ],
+    structures: [
+      { id: 'is', blockType: 'income_statement', roleUri: null, structureName: 'Income', order: 0 },
+    ],
+    facts: [f(100), f(60, [seg('us-gaap:ComputeMember')]), f(40, [seg('us-gaap:GraphicsMember')])],
+    elements: {
+      [REV]: el(REV, { monetary: true, periodType: 'duration', numericKind: 'monetary' }),
+      [ISABS]: el(ISABS, { abstract: true }),
+    },
+    periods: {
+      p: {
+        id: 'p',
+        type: 'duration',
+        instant: null,
+        startDate: '2025-01-01',
+        endDate: '2025-12-31',
+        end: '2025-12-31',
+      },
+    },
+    units: { u: { id: 'u', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+    calcAssociations: [],
+    // Presentation declares only the line item — no segment axis.
+    presAssociations: [{ parent: ISABS, child: REV, order: 1, role: null, structure: 'is' }],
+  }
+
+  it('default config does not pivot the undeclared segment axis', () => {
+    const cfg = defaultPivotConfig(model, model.informationBlocks[0])
+    expect(cfg.columns).toEqual(['period'])
+    expect(cfg.slicers).not.toContain(`dim:${SEG}`)
+  })
+
+  it('renders the consolidated value only, excluding the segment breakdown', () => {
+    const p = buildPivot(model, model.informationBlocks[0])
+    expect(p.columns).toHaveLength(1)
+    expect(p.rows.every((r) => r.members.length === 0)).toBe(true)
+    const rev = p.rows.find((r) => r.element.id === REV && r.members.length === 0)
+    expect(rev?.cells[0]?.value).toBe(100)
+  })
+})
