@@ -675,3 +675,77 @@ describe('buildPivot — members follow presentation order, not alphabetical', (
     expect(idx(WHOLESALE)).toBeLessThan(idx(OTHER))
   })
 })
+
+describe('buildPivot — empty member columns are dropped (dims as columns)', () => {
+  // A member present in one period but not another must not create an empty
+  // column in the period it is absent (the column analog of the row behavior).
+  const AX = 'us-gaap:ProductOrServiceAxis'
+  const REV = 'us-gaap:Revenues'
+  const LINES = 'us-gaap:RevenueLineItems'
+  const PRODUCT = 'us-gaap:ProductMember'
+  const SERVICE = 'us-gaap:ServiceMember'
+  const d = (m: string): DimensionQualifier => ({
+    axis: AX,
+    member: m,
+    axisLabel: 'Product or Service',
+    memberLabel: m.split(':').pop()?.replace('Member', '') ?? m,
+    explicit: true,
+  })
+  const f = (m: string, period: string, v: number): Fact => ({
+    id: `c${fid++}`,
+    element: REV,
+    period,
+    unit: 'u',
+    entity: 'e',
+    factSet: 'fs',
+    value: v,
+    decimals: '-3',
+    dimensions: [d(m)],
+  })
+  const inst = (id: string, end: string): PeriodInfo => ({
+    id,
+    type: 'instant',
+    instant: end,
+    startDate: null,
+    endDate: null,
+    end,
+  })
+  const model: NormalizedReport = {
+    reportId: 'r',
+    reportIri: null,
+    entity: { id: 'e', name: 'Co', legalName: null, country: null },
+    informationBlocks: [
+      { id: 'r0', blockType: '', factSet: 'fs', label: 'Rev', structureId: 'r0' },
+    ],
+    structures: [{ id: 'r0', blockType: '', roleUri: null, structureName: 'Rev', order: 0 }],
+    // Service has a fact in p1 only — no p2 fact.
+    facts: [f(PRODUCT, 'p1', 100), f(PRODUCT, 'p2', 110), f(SERVICE, 'p1', 50)],
+    elements: {
+      [LINES]: el(LINES, { abstract: true }),
+      [REV]: el(REV, { monetary: true, periodType: 'instant', numericKind: 'monetary' }),
+      [AX]: el(AX, { abstract: true }),
+    },
+    periods: { p1: inst('p1', '2025-03-31'), p2: inst('p2', '2026-03-31') },
+    units: { u: { id: 'u', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+    calcAssociations: [],
+    presAssociations: [
+      { parent: LINES, child: AX, order: 0, role: null, structure: 'r0' },
+      { parent: LINES, child: REV, order: 1, role: null, structure: 'r0' },
+      { parent: AX, child: PRODUCT, order: 1, role: null, structure: 'r0' },
+      { parent: AX, child: SERVICE, order: 2, role: null, structure: 'r0' },
+    ],
+  }
+
+  it('keeps only (period, member) columns that carry a fact', () => {
+    const cfg = pivotDimensionsOn(defaultPivotConfig(model, model.informationBlocks[0]), 'columns')
+    const p = buildPivot(model, model.informationBlocks[0], cfg)
+    const has = (end: string, label: string): boolean =>
+      p.columns.some((c) => c.period?.end === end && c.label === label)
+    expect(has('2025-03-31', 'Product')).toBe(true)
+    expect(has('2025-03-31', 'Service')).toBe(true)
+    expect(has('2026-03-31', 'Product')).toBe(true)
+    // Service has no 2026 fact → no empty Service column that period.
+    expect(has('2026-03-31', 'Service')).toBe(false)
+    expect(p.columns).toHaveLength(3)
+  })
+})

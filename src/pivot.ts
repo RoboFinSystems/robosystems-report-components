@@ -559,14 +559,26 @@ export function buildPivot(
   }
   const colCombos = memberCombos(facts, colDimAxes, tree.indexOf, true)
 
+  // Column coordinates that actually carry a fact. The member-combo union (and
+  // cross-product across axes) yields many (period × member) columns that never
+  // occur; drop the empty ones — the column analog of only emitting member rows
+  // that have facts.
+  const occupiedCols = new Set<string>()
+  for (const f of facts) {
+    const end = model.periods[f.period]?.end ?? ''
+    occupiedCols.add(`${end}#${coordinate(memberByAxis(f), colDimAxes)}`)
+  }
+
   const columns: PivotColumn[] = []
   const columnSegs: string[][] = []
   const periodList = periodOnColumns ? periods : [null]
   for (const period of periodList) {
     for (const combo of colCombos) {
+      const end = period?.end ?? ''
+      if (!occupiedCols.has(`${end}#${combo.sig}`)) continue
       const periodLabel = period ? formatDate(period.end) : ''
       columns.push({
-        key: `${period?.end ?? ''}#${combo.sig}`,
+        key: `${end}#${combo.sig}`,
         period,
         members: combo.members,
         label: combo.labels.length ? combo.labels[combo.labels.length - 1] : periodLabel,
