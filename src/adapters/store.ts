@@ -128,6 +128,10 @@ export function parseStore(store: Store): NormalizedReport {
     informationBlocks.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
+      // Match a block to its structure by identity (the rs:structure link),
+      // not by a semantic blockType — a full-fidelity holon carries no
+      // block-type classification, so structureId is how row order is found.
+      structureId: firstValue(id, IRI.structure) ?? undefined,
       factSet: firstValue(id, IRI.factSet),
       label: firstValue(id, IRI.prefLabel),
     })
@@ -142,6 +146,9 @@ export function parseStore(store: Store): NormalizedReport {
       blockType: firstValue(id, IRI.blockType) ?? '',
       roleUri: firstValue(id, IRI.roleUri),
       structureName: firstValue(id, IRI.structureName),
+      // Filing sequence (SEC role-definition number) so buildPivots orders all
+      // sections by the filer's order rather than the fixed four-primary fallback.
+      order: toNumber(firstValue(id, IRI.structureOrder)) ?? undefined,
     })
     for (const assoc of objects(id, IRI.hasAssociation)) {
       assocStructure.set(assoc.value, id)
