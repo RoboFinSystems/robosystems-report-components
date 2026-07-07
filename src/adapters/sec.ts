@@ -32,13 +32,16 @@
  *     alias every `p.end_date AS end_date`.
  */
 import { humanize, qname as toQname } from '../constants'
+import { currencySymbolFor } from '../format'
 import type {
   CalcAssociation,
+  DimensionQualifier,
   ElementInfo,
   EntityInfo,
   Fact,
   InformationBlock,
   NormalizedReport,
+  NumericKind,
   PeriodInfo,
   PeriodType,
   PresAssociation,
@@ -83,27 +86,32 @@ RETURN ent.identifier AS entity_id, ent.name AS entity_name,
        ent.legal_name AS legal_name, ent.cik AS cik, ent.ticker AS ticker,
        r.form AS form, r.report_date AS report_date`
 
-// Structures reachable from this report's (consolidated) facts, with their
-// factsets. `has_dimensions:false` keeps the consolidated totals; ORDER BY the
-// alias (Kùzu requires it once `collect` aggregates).
+// Structures reachable from this report's facts, with their factsets. Dimensional
+// facts belong to the same factsets as their consolidated totals, so no
+// `has_dimensions` filter is needed — dropping it also surfaces sections whose
+// content is entirely dimensional (e.g. Schedule II). ORDER BY the alias (Kùzu
+// requires it once `collect` aggregates).
 const SECTIONS_Q = `
-MATCH (r:Report {identifier: $rid})-[:REPORT_HAS_FACT]->(f:Fact {has_dimensions: false})<-[:FACT_SET_CONTAINS_FACT]-(fs:FactSet)<-[:STRUCTURE_HAS_FACT_SET]-(s:Structure)
+MATCH (r:Report {identifier: $rid})-[:REPORT_HAS_FACT]->(f:Fact)<-[:FACT_SET_CONTAINS_FACT]-(fs:FactSet)<-[:STRUCTURE_HAS_FACT_SET]-(s:Structure)
 RETURN s.identifier AS sid, s.canonical_type AS canonical_type,
        s.definition AS definition, s.number AS number,
        collect(DISTINCT fs.identifier) AS factsets
 ORDER BY number`
 
-// Facts for one factset. Anchored on the factset PK; `has_dimensions:false` keeps
-// the consolidated totals (dropping segment/axis breakdowns — a factset also
-// contains dimensional facts, e.g. equity by component, which would otherwise
-// double-count an element in a period). `WHERE f.value IS NOT NULL` + `LIMIT`
-// keep it on the fast path and retain text facts (Cover Page etc.).
+// Facts for one factset. Anchored on the factset PK; dimensional and consolidated
+// facts alike come through — the pivot engine keys cells by the full aspect
+// signature (element + period + dimensional coordinate), so segment/component
+// breakdowns no longer collide with the total. Element type signals
+// (`item_type`, `is_shares`) drive the value's numeric kind (monetary / per-share
+// / shares). `WHERE f.value IS NOT NULL` + `LIMIT` keep it on the fast path and
+// retain text facts (Cover Page etc.).
 const FACTS_Q = `
-MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact {has_dimensions: false})-[:FACT_HAS_ELEMENT]->(e:Element),
+MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact)-[:FACT_HAS_ELEMENT]->(e:Element),
       (f)-[:FACT_HAS_PERIOD]->(p:Period)
 WHERE f.value IS NOT NULL
 RETURN f.identifier AS fid, e.qname AS qname, e.name AS ename, e.balance AS balance,
        e.period_type AS e_period_type, e.is_abstract AS is_abstract, e.is_numeric AS is_numeric,
+       e.item_type AS item_type, e.is_shares AS is_shares,
        f.numeric_value AS numeric_value, f.value AS raw_value, f.decimals AS decimals,
        p.identifier AS pid, p.period_type AS period_type,
        p.start_date AS start_date, p.end_date AS end_date
@@ -112,19 +120,34 @@ LIMIT 2000`
 // Unit measures for the same factset, as a separate required-join query — an
 // OPTIONAL unit join on the facts query alone cost ~12 s.
 const UNITS_Q = `
-MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact {has_dimensions: false})-[:FACT_HAS_UNIT]->(u:Unit)
+MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact)-[:FACT_HAS_UNIT]->(u:Unit)
 WHERE f.value IS NOT NULL
 RETURN f.identifier AS fid, u.measure AS unit
 LIMIT 2000`
 
+// Dimensional qualifiers for the same factset — again a separate required-join
+// query (never OPTIONAL) so a fact with no dimensions simply contributes no rows.
+// One row per (fact, axis); a multi-axis fact yields several, merged client-side.
+const DIMS_Q = `
+MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact)-[:FACT_HAS_DIMENSION]->(d:Dimension)
+WHERE f.value IS NOT NULL
+RETURN f.identifier AS fid, d.axis AS axis, d.member AS member,
+       d.axis_uri AS axis_uri, d.member_uri AS member_uri,
+       d.is_explicit AS is_explicit, d.is_typed AS is_typed
+LIMIT 4000`
+
 // The presentation + calculation networks for one section, anchored on the
-// Structure PK. `association_type` is `Presentation` / `Calculation`.
+// Structure PK. `association_type` is `Presentation` / `Calculation`. Element
+// names + `is_abstract` come along so presentation-only nodes (abstract section
+// headers, which carry no facts) can be registered — without them the projection
+// can't tell a header from a concrete line and mis-orders it.
 const ASSOC_Q = `
 MATCH (s:Structure {identifier: $sid})-[:STRUCTURE_HAS_ASSOCIATION]->(a:Association),
       (a)-[:ASSOCIATION_HAS_FROM_ELEMENT]->(pe:Element),
       (a)-[:ASSOCIATION_HAS_TO_ELEMENT]->(ce:Element)
-RETURN a.association_type AS association_type, a.order_value AS order_value,
-       a.weight AS weight, pe.qname AS parent, ce.qname AS child`
+RETURN a.association_type AS association_type, a.order_value AS order_value, a.weight AS weight,
+       pe.qname AS parent, pe.name AS parent_name, pe.is_abstract AS parent_abstract,
+       ce.qname AS child, ce.name AS child_name, ce.is_abstract AS child_abstract`
 
 // ── Row helpers ────────────────────────────────────────────────────────────────
 
@@ -150,31 +173,50 @@ function periodType(raw: string | null): PeriodType | null {
 }
 
 /**
- * Drop noise columns. A section's factset can carry a handful of facts at extra
- * period-ends — e.g. the balance sheet factset also holds prior-year equity
- * *opening* balances (StockholdersEquity at 4 dates while every other line has
- * 2). Those show as near-empty columns. Keep only period-ends whose fact count
- * is a meaningful fraction of the densest column's; a real comparative period
- * repeats most line items, so it clears the bar, while a 1-off does not.
+ * A prefixed qname for a dimension axis/member from its versioned XBRL IRI + local
+ * name (`http://fasb.org/us-gaap/2025#…Member` + `…Member` → `us-gaap:…Member`).
+ * The graph gives axis/member as bare local names; this keeps them consistent with
+ * the `Element.qname`s used in the presentation network (so member ordering lines
+ * up), and cell matching is internally consistent regardless (row + column derive
+ * from the same mapping).
  */
-const DENSE_PERIOD_FRACTION = 0.2
-
-function filterToDominantPeriods(facts: Fact[], periods: Record<string, PeriodInfo>): Fact[] {
-  const countByEnd = new Map<string, number>()
-  for (const f of facts) {
-    const end = periods[f.period]?.end
-    if (end) countByEnd.set(end, (countByEnd.get(end) ?? 0) + 1)
+function xbrlQname(uri: string | null, local: string | null): string {
+  if (local) {
+    const ns = (uri ?? '').split('#')[0]
+    if (/fasb\.org\/us-gaap/.test(ns)) return `us-gaap:${local}`
+    if (/fasb\.org\/srt/.test(ns)) return `srt:${local}`
+    if (/xbrl\.sec\.gov\/dei/.test(ns)) return `dei:${local}`
+    if (/robosystems\.ai\/taxonomy\/rs-gaap/.test(ns)) return `rs-gaap:${local}`
+    return local
   }
-  if (countByEnd.size <= 1) return facts
-  const max = Math.max(...countByEnd.values())
-  const threshold = max * DENSE_PERIOD_FRACTION
-  const keep = new Set(
-    [...countByEnd].filter(([, count]) => count >= threshold).map(([end]) => end)
-  )
-  return facts.filter((f) => {
-    const end = periods[f.period]?.end
-    return end !== undefined && keep.has(end)
-  })
+  return uri ? toQname(uri) : ''
+}
+
+/** Humanize an axis/member local name, dropping the XBRL `Axis`/`Member`/`Domain` suffix. */
+function dimLabel(local: string | null): string {
+  if (!local) return ''
+  return humanize(local.replace(/(Axis|Member|Domain)$/, '')) || humanize(local)
+}
+
+/**
+ * Classify an element's numeric kind from its XBRL `item_type` (+ `is_shares`).
+ * Per-share and share counts opt out of monetary rescaling; strings/text are not
+ * numeric. Checked before monetary because share/per-share types are also numeric.
+ */
+function deriveNumericKind(row: Record<string, unknown>): NumericKind | undefined {
+  const itemType = str(row, 'item_type') ?? ''
+  if (/perShareItemType/i.test(itemType)) return 'perShare'
+  if (/sharesItemType/i.test(itemType) || bool(row, 'is_shares')) return 'shares'
+  // A percentItemType stores a decimal fraction (0.10 → 10%); a pureItemType is a
+  // bare dimensionless ratio (2.5 debt-to-equity), NOT a percentage.
+  if (/percentItemType/i.test(itemType)) return 'percent'
+  if (/pureItemType/i.test(itemType)) return 'pure'
+  if (/monetaryItemType/i.test(itemType)) return 'monetary'
+  if (/integerItemType/i.test(itemType)) return 'integer'
+  if (!bool(row, 'is_numeric')) return undefined
+  // No item_type (older captures): a debit/credit balance marks a monetary item.
+  const balance = str(row, 'balance')
+  return balance === 'debit' || balance === 'credit' ? 'monetary' : 'other'
 }
 
 /**
@@ -286,6 +328,33 @@ function accumulateElement(elements: Record<string, ElementInfo>, row: Record<st
     periodType: periodType(str(row, 'e_period_type')),
     abstract: bool(row, 'is_abstract'),
     monetary: bool(row, 'is_numeric'),
+    numericKind: deriveNumericKind(row),
+  }
+}
+
+/**
+ * Register a presentation-network element that has no facts of its own — chiefly
+ * an abstract section header. Fact-bearing elements are already registered from
+ * the facts query and take precedence (this no-ops on existing keys); this fills
+ * in the abstract headers so the projection renders them as headers above their
+ * section rather than as empty concrete rows below it. Abstract labels drop the
+ * XBRL `Abstract` suffix (`OperatingExpensesAbstract` → `Operating Expenses`).
+ */
+function registerPresentationElement(
+  elements: Record<string, ElementInfo>,
+  qname: string | null,
+  name: string | null,
+  isAbstract: boolean
+): void {
+  if (!qname || elements[qname]) return
+  elements[qname] = {
+    id: qname,
+    qname,
+    label: name ? humanize(isAbstract ? name.replace(/Abstract$/, '') : name) : humanize(qname),
+    balance: null,
+    periodType: null,
+    abstract: isAbstract,
+    monetary: false,
   }
 }
 
@@ -316,9 +385,10 @@ export async function fetchSecSection(
   shell: SecReportShell,
   section: SecSection
 ): Promise<NormalizedReport> {
-  const [factRowGroups, unitRowGroups, assocRows] = await Promise.all([
+  const [factRowGroups, unitRowGroups, dimRowGroups, assocRows] = await Promise.all([
     Promise.all(section.factsetIds.map((fsid) => query(FACTS_Q, { fsid }))),
     Promise.all(section.factsetIds.map((fsid) => query(UNITS_Q, { fsid }))),
+    Promise.all(section.factsetIds.map((fsid) => query(DIMS_Q, { fsid }))),
     query(ASSOC_Q, { sid: section.id }),
   ])
 
@@ -328,6 +398,26 @@ export async function fetchSecSection(
     const measure = str(row, 'unit')
     if (fid && measure) unitByFid.set(fid, measure)
   }
+
+  // One fact can carry several axes; collect its qualifiers (ordered by axis).
+  const dimsByFid = new Map<string, DimensionQualifier[]>()
+  for (const row of dimRowGroups.flat()) {
+    const fid = str(row, 'fid')
+    if (!fid) continue
+    const memberLocal = str(row, 'member')
+    const qual: DimensionQualifier = {
+      axis: xbrlQname(str(row, 'axis_uri'), str(row, 'axis')),
+      member: memberLocal ? xbrlQname(str(row, 'member_uri'), memberLocal) : null,
+      axisLabel: dimLabel(str(row, 'axis')),
+      memberLabel: dimLabel(memberLocal),
+      explicit: bool(row, 'is_explicit'),
+      typedValue: bool(row, 'is_typed') ? str(row, 'member') : null,
+    }
+    const list = dimsByFid.get(fid) ?? []
+    list.push(qual)
+    dimsByFid.set(fid, list)
+  }
+  for (const list of dimsByFid.values()) list.sort((a, b) => a.axis.localeCompare(b.axis))
 
   const elements: Record<string, ElementInfo> = {}
   const periods: Record<string, PeriodInfo> = {}
@@ -352,6 +442,7 @@ export async function fetchSecSection(
         id: measure,
         measure: compact,
         label: compact.includes(':') ? (compact.split(':').pop() as string) : compact,
+        symbol: currencySymbolFor(compact),
       }
     }
 
@@ -366,6 +457,7 @@ export async function fetchSecSection(
       value,
       decimals: str(row, 'decimals'),
       textValue: value === null ? str(row, 'raw_value') : null,
+      dimensions: dimsByFid.get(fid),
     })
   }
 
@@ -375,6 +467,21 @@ export async function fetchSecSection(
     const parent = str(row, 'parent')
     const child = str(row, 'child')
     if (!parent || !child) continue
+    // Register presentation-only elements (abstract section headers carry no
+    // facts, so the facts query never saw them). Fact-bearing elements are
+    // already registered and unaffected — registration no-ops on existing keys.
+    registerPresentationElement(
+      elements,
+      parent,
+      str(row, 'parent_name'),
+      bool(row, 'parent_abstract')
+    )
+    registerPresentationElement(
+      elements,
+      child,
+      str(row, 'child_name'),
+      bool(row, 'child_abstract')
+    )
     const order = num(row, 'order_value') ?? 0
     const type = str(row, 'association_type')?.toLowerCase()
     if (type === 'calculation') {
@@ -412,7 +519,7 @@ export async function fetchSecSection(
     entity: shell.entity,
     informationBlocks: [informationBlock],
     structures: [structure],
-    facts: filterToDominantPeriods(facts, periods),
+    facts,
     elements,
     periods,
     units,

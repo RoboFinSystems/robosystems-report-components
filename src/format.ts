@@ -2,7 +2,7 @@
  * Pure formatting helpers shared by the projection and the components. No React
  * here, so the projection can depend on it without pulling in a renderer.
  */
-import type { PeriodInfo } from './model'
+import type { ElementInfo, NumericKind, PeriodInfo } from './model'
 
 /**
  * Accounting-style money: negatives in parentheses, no sign, an em-dash for
@@ -33,10 +33,117 @@ export function formatDate(iso: string | null | undefined): string {
   return `${MONTHS[idx] ?? month} ${Number(day)}, ${year}`
 }
 
+/**
+ * Humanize an ISO-8601 duration value (`P10Y` → "10 years", `P1Y6M` → "1 year 6
+ * months", `P30D` → "30 days"), or null when the string is not a duration — so a
+ * non-numeric fact that happens to start with "P" (a company name) is untouched.
+ * XBRL `durationItemType` facts (debt maturities, lease terms) arrive as these
+ * strings in the text path.
+ */
+export function humanizeDuration(value: string | null | undefined): string | null {
+  if (!value) return null
+  const m =
+    /^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/.exec(
+      value.trim()
+    )
+  if (!m) return null
+  const [, sign, y, mo, w, d, h, min, s] = m
+  const parts: string[] = []
+  const push = (n: string | undefined, unit: string): void => {
+    if (n) parts.push(`${n} ${unit}${Number(n) === 1 ? '' : 's'}`)
+  }
+  push(y, 'year')
+  push(mo, 'month')
+  push(w, 'week')
+  push(d, 'day')
+  push(h, 'hour')
+  push(min, 'minute')
+  push(s, 'second')
+  if (!parts.length) return null
+  return `${sign ?? ''}${parts.join(' ')}`
+}
+
 /** A human description of a period — "As of …" for instants, a span for durations. */
 export function formatPeriod(period: PeriodInfo): string {
   if (period.type === 'instant') {
     return `As of ${formatDate(period.instant ?? period.end)}`
   }
   return `${formatDate(period.startDate)} – ${formatDate(period.endDate ?? period.end)}`
+}
+
+/** The effective numeric kind of an element (explicit, else derived from monetary). */
+export function numericKindOf(el: ElementInfo): NumericKind {
+  return el.numericKind ?? (el.monetary ? 'monetary' : 'other')
+}
+
+/** Common currency symbols by ISO-4217 code; null for a non-currency unit. */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '¥',
+  CHF: 'CHF ',
+  CAD: 'CA$',
+  AUD: 'A$',
+  HKD: 'HK$',
+  INR: '₹',
+  KRW: '₩',
+}
+
+/**
+ * A display prefix for a monetary unit measure (`iso4217:USD` → `$`), else null.
+ * Unknown currencies fall back to their code (`CHF `, `SEK `) rather than a wrong
+ * dollar sign — this is what fixes non-USD facts rendering as `$`.
+ */
+export function currencySymbolFor(measure: string | null | undefined): string | null {
+  if (!measure) return null
+  const code = (measure.includes(':') ? measure.split(':').pop()! : measure).toUpperCase()
+  if (CURRENCY_SYMBOLS[code]) return CURRENCY_SYMBOLS[code]
+  // A currency-shaped code (3 letters) we don't have a glyph for → code prefix.
+  return /^[A-Z]{3}$/.test(code) ? `${code} ` : null
+}
+
+export interface ValueFormat {
+  /** Drives symbol, scaling opt-out, and decimal places. Defaults to `monetary`. */
+  numericKind?: NumericKind
+  /** Currency symbol for monetary/per-share values (from the fact's unit). */
+  symbol?: string | null
+  /** Divide monetary values by this (e.g. 1e6 to show millions); default 1. */
+  scaleFactor?: number
+}
+
+/**
+ * Format a fact value for display: accounting style (negatives in parentheses,
+ * em-dash for absent), the fact's own currency symbol (never a hard-coded `$`),
+ * and the section scale — with per-share amounts and share counts never rescaled
+ * (an EPS of 4.93 stays 4.93 under "in millions"). A `percent` fact stores a
+ * decimal fraction, so it is scaled ×100 and suffixed with `%` (0.10 → 10%); a
+ * `pure` fact is a bare ratio, shown as a plain decimal (no `%`).
+ */
+export function formatValue(value: number | null | undefined, fmt: ValueFormat = {}): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  const kind = fmt.numericKind ?? 'monetary'
+  const scale = kind === 'monetary' ? (fmt.scaleFactor ?? 1) : 1
+  const scaled = kind === 'percent' ? value * 100 : value / scale
+
+  let minFrac = 0
+  let maxFrac = 0
+  if (kind === 'perShare') {
+    minFrac = maxFrac = 2
+  } else if (kind === 'monetary') {
+    minFrac = maxFrac = scale > 1 ? 0 : 2
+  } else if (kind === 'percent') {
+    maxFrac = 2
+  } else if (kind === 'pure') {
+    maxFrac = 4
+  }
+
+  const abs = Math.abs(scaled).toLocaleString('en-US', {
+    minimumFractionDigits: minFrac,
+    maximumFractionDigits: maxFrac,
+  })
+  const symbol = kind === 'monetary' || kind === 'perShare' ? (fmt.symbol ?? '') : ''
+  const suffix = kind === 'percent' ? '%' : ''
+  return scaled < 0 ? `${symbol}(${abs}${suffix})` : `${symbol}${abs}${suffix}`
 }

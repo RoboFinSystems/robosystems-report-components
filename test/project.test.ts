@@ -3,36 +3,31 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseJsonld } from '../src/adapters/jsonld'
-import type { Statement } from '../src/model'
-import {
-  buildStatements,
-  calcSubtotals,
-  footCheck,
-  reportSections,
-  sliceReportSection,
-} from '../src/project'
+import type { PivotTable } from '../src/model'
+import { buildPivots, reportSections } from '../src/pivot'
+import { calcSubtotals, footCheck, sliceReportSection } from '../src/project'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const holon = readFileSync(join(here, 'fixtures', 'seattle-method-case-1.holon.jsonld'), 'utf8')
 
 const report = await parseJsonld(holon)
-const statements = buildStatements(report)
+const statements = buildPivots(report)
 
-function statementOf(blockType: string): Statement {
+function statementOf(blockType: string): PivotTable {
   const s = statements.find((x) => x.blockType === blockType)
   if (!s) throw new Error(`no statement for ${blockType}`)
   return s
 }
 
 // Columns are sorted ascending by date; the latest column is the primary
-// reporting period (e.g. 2024-03-31 for the balance sheet, alongside a sparse
-// 2023-12-31 opening-balance column).
-function latestCol(statement: Statement): number {
+// reporting period (e.g. 2024-03-31 for the balance sheet).
+function latestCol(statement: PivotTable): number {
   return statement.columns.length - 1
 }
 
-function valueOf(statement: Statement, qname: string, col = latestCol(statement)): number | null {
-  const row = statement.rows.find((r) => r.element.qname === qname)
+// Read a concept's consolidated (undimensioned) value — members-empty row.
+function valueOf(statement: PivotTable, qname: string, col = latestCol(statement)): number | null {
+  const row = statement.rows.find((r) => r.element.qname === qname && r.members.length === 0)
   return row ? (row.cells[col]?.value ?? null) : null
 }
 
@@ -115,9 +110,9 @@ describe('sections — reportSections + sliceReportSection', () => {
     ])
   })
 
-  it('slices to a single section whose buildStatements yields just that statement', () => {
+  it('slices to a single section whose buildPivots yields just that statement', () => {
     for (const section of reportSections(report)) {
-      const statements = buildStatements(sliceReportSection(report, section.id))
+      const statements = buildPivots(sliceReportSection(report, section.id))
       expect(statements).toHaveLength(1)
       expect(statements[0].title).toBe(section.title)
     }
@@ -125,7 +120,7 @@ describe('sections — reportSections + sliceReportSection', () => {
 
   it('the sliced balance sheet still foots (14,450)', () => {
     const bsId = reportSections(report).find((s) => s.title === 'Balance Sheet')!.id
-    const bs = buildStatements(sliceReportSection(report, bsId))[0]
+    const bs = buildPivots(sliceReportSection(report, bsId))[0]
     expect(valueOf(bs, 'rs-gaap:Assets')).toBe(14450)
   })
 

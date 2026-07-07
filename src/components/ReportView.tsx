@@ -5,21 +5,22 @@
  */
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
-import type { NormalizedReport, StatementRow } from '../model'
-import { buildStatements } from '../project'
+import type { NormalizedReport, PivotRow } from '../model'
+import { buildPivots, pivotDimensionsOn } from '../pivot'
 import { FactInspector } from './FactInspector'
 import { StatementTable } from './StatementTable'
 
 export interface ReportViewProps {
   report: NormalizedReport
-  currencySymbol?: string
   /** Disable the click-to-inspect fact panel (render-only). */
   inspect?: boolean
+  /** Initial placement for dimension breakdowns (default `rows`). */
+  dimensionAxis?: 'rows' | 'columns'
 }
 
 interface Selection {
   statementIndex: number
-  elementId: string
+  rowKey: string
   columnIndex: number
 }
 
@@ -47,12 +48,22 @@ const styles: Record<string, CSSProperties> = {
   panel: { position: 'sticky', top: '1rem' },
 }
 
-export function ReportView({ report, currencySymbol = '$', inspect = true }: ReportViewProps) {
-  const statements = useMemo(() => buildStatements(report), [report])
+export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: ReportViewProps) {
+  const [dimAxis, setDimAxis] = useState<'rows' | 'columns'>(dimensionAxis)
   const [selection, setSelection] = useState<Selection | null>(null)
 
+  const statements = useMemo(
+    () => buildPivots(report, (_ib, cfg) => pivotDimensionsOn(cfg, dimAxis)),
+    [report, dimAxis]
+  )
+
   const selected = selection !== null ? statements[selection.statementIndex] : null
-  const selectedRow = selected?.rows.find((r) => r.element.id === selection?.elementId) ?? null
+  const selectedRow = selected?.rows.find((r) => r.key === selection?.rowKey) ?? null
+
+  const setPlacement = (placement: 'rows' | 'columns'): void => {
+    setSelection(null) // row/column keys differ between placements
+    setDimAxis(placement)
+  }
 
   return (
     <div>
@@ -72,24 +83,19 @@ export function ReportView({ report, currencySymbol = '$', inspect = true }: Rep
           {statements.map((statement, statementIndex) => (
             <StatementTable
               key={statement.ib.id}
-              statement={statement}
-              currencySymbol={currencySymbol}
+              table={statement}
+              units={report.units}
+              dimensionPlacement={dimAxis}
+              onDimensionPlacementChange={setPlacement}
               selected={
                 selection && selection.statementIndex === statementIndex
-                  ? {
-                      elementId: selection.elementId,
-                      columnIndex: selection.columnIndex,
-                    }
+                  ? { rowKey: selection.rowKey, columnIndex: selection.columnIndex }
                   : null
               }
               onCellClick={
                 inspect
-                  ? (row: StatementRow, columnIndex: number) =>
-                      setSelection({
-                        statementIndex,
-                        elementId: row.element.id,
-                        columnIndex,
-                      })
+                  ? (row: PivotRow, columnIndex: number) =>
+                      setSelection({ statementIndex, rowKey: row.key, columnIndex })
                   : undefined
               }
             />
@@ -100,10 +106,9 @@ export function ReportView({ report, currencySymbol = '$', inspect = true }: Rep
           <div style={styles.panel}>
             <FactInspector
               report={report}
-              statement={selected}
+              table={selected}
               row={selectedRow}
               columnIndex={selection.columnIndex}
-              currencySymbol={currencySymbol}
               onClose={() => setSelection(null)}
             />
           </div>
