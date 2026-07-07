@@ -15,7 +15,7 @@ import type { CSSProperties } from 'react'
 import { isExternalFactUrl } from '../constants'
 import { currencySymbolFor, formatValue, humanizeDuration, numericKindOf } from '../format'
 import type { PivotRow, PivotTable, UnitInfo } from '../model'
-import { ExternalTextBlock } from './ExternalTextBlock'
+import { ExternalTextBlock, InlineTextBlock } from './ExternalTextBlock'
 
 export interface StatementTableProps {
   table: PivotTable
@@ -279,6 +279,32 @@ export function StatementTable({
                     </td>
                   </tr>
                 )
+              }
+
+              // An *inline* text-block disclosure: the holon carries the HTML in
+              // the fact (rs:stringValue), not a CDN URL. The element's value
+              // domain (rs:itemType = textBlock) marks it; render full-width in
+              // the same sandboxed frame.
+              if (row.element.itemType === 'textBlock') {
+                const inline = row.cells.find(
+                  (c) =>
+                    c.value === null &&
+                    c.textValue != null &&
+                    c.textValue !== '' &&
+                    !isExternalFactUrl(c.textValue)
+                )
+                if (inline?.textValue) {
+                  return (
+                    <tr key={row.key}>
+                      <td colSpan={totalCols + 1} style={styles.textBlockCell}>
+                        <div style={styles.textBlockLabel} title={row.element.qname}>
+                          {rowLabel(row)}
+                        </div>
+                        <InlineTextBlock html={inline.textValue} />
+                      </td>
+                    </tr>
+                  )
+                }
               }
 
               const kind = numericKindOf(row.element)

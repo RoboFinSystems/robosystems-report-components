@@ -37,6 +37,7 @@ export const IRI = {
   entity: NS.rs + 'entity',
   factSet: NS.rs + 'factSet',
   numericValue: NS.rs + 'numericValue',
+  stringValue: NS.rs + 'stringValue',
   decimals: NS.rs + 'decimals',
   blockType: NS.rs + 'blockType',
   associationType: NS.rs + 'associationType',
@@ -47,6 +48,7 @@ export const IRI = {
   structureOrder: NS.rs + 'structureOrder',
   abstract: NS.rs + 'abstract',
   monetary: NS.rs + 'monetary',
+  itemType: NS.rs + 'itemType',
   legalName: NS.rs + 'legalName',
   country: NS.rs + 'country',
   // skos:

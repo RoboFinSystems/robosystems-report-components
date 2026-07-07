@@ -34,4 +34,29 @@ describe('holon store adapter', () => {
     expect(ib?.structureId).toBe('http://ex/st1')
     expect(st?.order).toBe(5)
   })
+
+  it('reads Fact.textValue and Element.itemType (text-block disclosures)', async () => {
+    const doc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/f1',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/el1' },
+          [`${RS}period`]: { '@id': 'http://ex/p1' },
+          [`${RS}stringValue`]: '<div>Accounting policy narrative.</div>',
+          [`${RS}factType`]: 'nonnumeric',
+        },
+        {
+          '@id': 'http://ex/el1',
+          '@type': `${RS}Element`,
+          [`${RS}itemType`]: 'textBlock',
+          [`${SKOS}prefLabel`]: 'Significant Accounting Policies',
+        },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    const fact = model.facts.find((f) => f.id === 'http://ex/f1')
+    expect(fact?.textValue).toBe('<div>Accounting policy narrative.</div>')
+    expect(model.elements['http://ex/el1']?.itemType).toBe('textBlock')
+  })
 })

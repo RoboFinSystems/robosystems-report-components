@@ -60,6 +60,7 @@ export function parseStore(store: Store): NormalizedReport {
       periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
       abstract: firstValue(id, IRI.abstract) === 'true',
       monetary: firstValue(id, IRI.monetary) === 'true',
+      itemType: firstValue(id, IRI.itemType) ?? undefined,
     }
   }
 
@@ -118,6 +119,7 @@ export function parseStore(store: Store): NormalizedReport {
       entity: firstValue(id, IRI.entity),
       factSet: firstValue(id, IRI.factSet),
       value: toNumber(firstValue(id, IRI.numericValue)),
+      textValue: firstValue(id, IRI.stringValue),
       decimals: firstValue(id, IRI.decimals),
     })
   }
