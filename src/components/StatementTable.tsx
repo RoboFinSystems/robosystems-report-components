@@ -13,7 +13,7 @@
  */
 import type { CSSProperties } from 'react'
 import { isExternalFactUrl } from '../constants'
-import { currencySymbolFor, formatValue, numericKindOf } from '../format'
+import { currencySymbolFor, formatValue, humanizeDuration, numericKindOf } from '../format'
 import type { PivotRow, PivotTable, UnitInfo } from '../model'
 import { ExternalTextBlock } from './ExternalTextBlock'
 
@@ -119,9 +119,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: '0.8rem',
     textAlign: 'center',
   },
-  thConcept: { textAlign: 'left', verticalAlign: 'bottom' },
+  // A floor on the concept column so a wide table (many member/period columns)
+  // scrolls horizontally rather than squeezing labels down to vertical text.
+  thConcept: { textAlign: 'left', verticalAlign: 'bottom', minWidth: '18rem' },
   thNum: { textAlign: 'right', whiteSpace: 'nowrap' },
-  labelCell: { padding: '0.3rem 0.75rem', whiteSpace: 'normal' },
+  labelCell: { padding: '0.3rem 0.75rem', whiteSpace: 'normal', minWidth: '18rem' },
   headerRowLabel: {
     padding: '0.4rem 0.75rem',
     fontWeight: 700,
@@ -221,9 +223,8 @@ export function StatementTable({
                     <th
                       rowSpan={columnHeaders.length}
                       style={{ ...styles.th, ...styles.thConcept }}
-                    >
-                      Concept
-                    </th>
+                      aria-label="Concept"
+                    />
                   ) : null}
                   {level.map((h, i) => {
                     const key = `${levelIndex}-${i}-${leaf}`
@@ -304,6 +305,10 @@ export function StatementTable({
                     const clickable = onCellClick && cell.fact !== null
                     const isText =
                       cell.value === null && cell.textValue != null && cell.textValue !== ''
+                    // An ISO-8601 duration term (P10Y) reads as a value, not prose:
+                    // humanize it and keep it right-aligned with the numbers.
+                    const duration = isText ? humanizeDuration(cell.textValue) : null
+                    const isProse = isText && !duration
                     const unit = cell.fact?.unit && units ? units[cell.fact.unit] : undefined
                     const numStyle: CSSProperties = {
                       ...styles.numCell,
@@ -315,7 +320,7 @@ export function StatementTable({
                         !isText && !row.isSubtotal && (cell.value === null || cell.value === 0)
                           ? 'var(--rs-muted, #9ca3af)'
                           : undefined,
-                      ...(isText
+                      ...(isProse
                         ? {
                             textAlign: 'left',
                             whiteSpace: 'normal',
@@ -327,7 +332,7 @@ export function StatementTable({
                     // a genuine $0 (Commitments & Contingencies, zero balance) →
                     // an em-dash; anything else → the formatted value.
                     const display = isText
-                      ? cell.textValue
+                      ? (duration ?? cell.textValue)
                       : cell.fact === null
                         ? ''
                         : cell.value === 0

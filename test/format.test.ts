@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currencySymbolFor, formatValue } from '../src/format'
+import { currencySymbolFor, formatValue, humanizeDuration } from '../src/format'
 
 describe('formatValue — numeric kinds', () => {
   it('scales a percent fact ×100 and suffixes % (0.10 → 10%)', () => {
@@ -39,6 +39,24 @@ describe('formatValue — numeric kinds', () => {
   it('renders absent values as an em-dash', () => {
     expect(formatValue(null)).toBe('—')
     expect(formatValue(undefined)).toBe('—')
+  })
+})
+
+describe('humanizeDuration', () => {
+  it('humanizes ISO-8601 durations', () => {
+    expect(humanizeDuration('P10Y')).toBe('10 years')
+    expect(humanizeDuration('P1Y')).toBe('1 year')
+    expect(humanizeDuration('P12M')).toBe('12 months')
+    expect(humanizeDuration('P1Y6M')).toBe('1 year 6 months')
+    expect(humanizeDuration('P30D')).toBe('30 days')
+    expect(humanizeDuration('PT30M')).toBe('30 minutes')
+  })
+
+  it('returns null for non-duration strings so prose facts are untouched', () => {
+    expect(humanizeDuration('NVIDIA CORP')).toBeNull()
+    expect(humanizeDuration('Promissory Notes')).toBeNull()
+    expect(humanizeDuration('P')).toBeNull()
+    expect(humanizeDuration(null)).toBeNull()
   })
 })
 

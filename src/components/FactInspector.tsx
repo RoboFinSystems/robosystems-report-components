@@ -8,7 +8,13 @@
  * (the bug the pivot rewrite set out to kill).
  */
 import type { CSSProperties, ReactNode } from 'react'
-import { currencySymbolFor, formatPeriod, formatValue, numericKindOf } from '../format'
+import {
+  currencySymbolFor,
+  formatPeriod,
+  formatValue,
+  humanizeDuration,
+  numericKindOf,
+} from '../format'
 import type { NormalizedReport, PivotRow, PivotTable, UnitInfo } from '../model'
 import { footCheck } from '../project'
 
@@ -124,7 +130,7 @@ export function FactInspector({ report, table, row, columnIndex, onClose }: Fact
       <div style={styles.grid}>
         <Field k="Value">
           {cell?.value === null && cell?.textValue ? (
-            <span>{cell.textValue}</span>
+            <span>{humanizeDuration(cell.textValue) ?? cell.textValue}</span>
           ) : (
             <span style={styles.mono}>
               {formatValue(cell?.value ?? null, { numericKind: kind, symbol: sym })}

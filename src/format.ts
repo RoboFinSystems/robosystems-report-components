@@ -33,6 +33,36 @@ export function formatDate(iso: string | null | undefined): string {
   return `${MONTHS[idx] ?? month} ${Number(day)}, ${year}`
 }
 
+/**
+ * Humanize an ISO-8601 duration value (`P10Y` → "10 years", `P1Y6M` → "1 year 6
+ * months", `P30D` → "30 days"), or null when the string is not a duration — so a
+ * non-numeric fact that happens to start with "P" (a company name) is untouched.
+ * XBRL `durationItemType` facts (debt maturities, lease terms) arrive as these
+ * strings in the text path.
+ */
+export function humanizeDuration(value: string | null | undefined): string | null {
+  if (!value) return null
+  const m =
+    /^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/.exec(
+      value.trim()
+    )
+  if (!m) return null
+  const [, sign, y, mo, w, d, h, min, s] = m
+  const parts: string[] = []
+  const push = (n: string | undefined, unit: string): void => {
+    if (n) parts.push(`${n} ${unit}${Number(n) === 1 ? '' : 's'}`)
+  }
+  push(y, 'year')
+  push(mo, 'month')
+  push(w, 'week')
+  push(d, 'day')
+  push(h, 'hour')
+  push(min, 'minute')
+  push(s, 'second')
+  if (!parts.length) return null
+  return `${sign ?? ''}${parts.join(' ')}`
+}
+
 /** A human description of a period — "As of …" for instants, a span for durations. */
 export function formatPeriod(period: PeriodInfo): string {
   if (period.type === 'instant') {
