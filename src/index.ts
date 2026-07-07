@@ -43,6 +43,6 @@ export {
   mergeSecSections,
   parseStructureDefinition,
 } from './adapters/sec'
-export type { SecQuery, SecReportShell, SecSection } from './adapters/sec'
+export type { ReportLabels, SecQuery, SecReportShell, SecSection } from './adapters/sec'
 export { parseStore } from './adapters/store'
 export type { ReportAdapter } from './adapters/types'

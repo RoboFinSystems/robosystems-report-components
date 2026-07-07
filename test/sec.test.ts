@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import type { SecQuery } from '../src/adapters/sec'
+import type { ReportLabels, SecQuery, SecReportShell, SecSection } from '../src/adapters/sec'
 import {
   fetchSecReportShell,
   fetchSecSection,
@@ -139,6 +139,126 @@ describe('sec adapter — cover page (text facts)', () => {
     const cell = nameRow!.cells.find((c) => c.textValue)
     expect(cell?.value).toBeNull()
     expect(cell?.textValue).toBe('NVIDIA CORP')
+  })
+})
+
+describe('sec adapter — report-scoped labels via the per-report taxonomy', () => {
+  // The SEC graph resolves labels through the filer's per-report extension
+  // taxonomy, tagged with the element each label is for (element_uri). The adapter
+  // prefers those and humanizes the qname only as a fallback. See sec-label-scoping.
+  const STD = 'http://www.xbrl.org/2003/role/label'
+  const labels: ReportLabels = {
+    byElement: new Map([
+      [
+        'http://fasb.org/us-gaap/2025#PropertyPlantAndEquipmentNet',
+        new Map([[STD, 'Property, Plant and Equipment, Net']]),
+      ],
+      // a filer-extension member whose qname prefix isn't reconstructible — URI keying still resolves it
+      ['http://filer.example.com/20240101#RetailMember', new Map([[STD, 'Retail']])],
+    ]),
+  }
+  const labelShell: SecReportShell = {
+    reportId: 'r1',
+    entity: { id: 'ent1', name: 'Test Co', legalName: null, country: null },
+    sections: [],
+    labels,
+  }
+  const labelSection: SecSection = {
+    id: 'struct-1',
+    title: 'Balance Sheet',
+    kind: 'Statement',
+    canonicalType: 'balance_sheet',
+    order: 0,
+    factsetIds: ['fs-1'],
+  }
+  const factRows: Array<Record<string, unknown>> = [
+    {
+      fid: 'f-ppe',
+      qname: 'us-gaap:PropertyPlantAndEquipmentNet',
+      euri: 'http://fasb.org/us-gaap/2025#PropertyPlantAndEquipmentNet',
+      ename: 'PropertyPlantAndEquipmentNet',
+      is_numeric: true,
+      item_type: 'monetaryItemType',
+      numeric_value: 1000,
+      raw_value: '1000',
+      pid: 'p1',
+      period_type: 'instant',
+      end_date: '2024-01-28',
+    },
+    {
+      fid: 'f-other',
+      qname: 'us-gaap:OtherAssetsNoncurrent',
+      euri: 'http://fasb.org/us-gaap/2025#OtherAssetsNoncurrent', // not in the dictionary → humanize
+      ename: 'OtherAssetsNoncurrent',
+      is_numeric: true,
+      item_type: 'monetaryItemType',
+      numeric_value: 50,
+      raw_value: '50',
+      pid: 'p1',
+      period_type: 'instant',
+      end_date: '2024-01-28',
+    },
+  ]
+  const dimRows: Array<Record<string, unknown>> = [
+    {
+      fid: 'f-ppe',
+      axis: 'ProductOrServiceAxis',
+      member: 'RetailMember',
+      axis_uri: 'http://fasb.org/srt/2025#ProductOrServiceAxis',
+      member_uri: 'http://filer.example.com/20240101#RetailMember',
+      is_explicit: true,
+      is_typed: false,
+    },
+    {
+      fid: 'f-other',
+      axis: 'ConcentrationRiskByTypeAxis',
+      member: 'CommercialMember',
+      axis_uri: 'http://fasb.org/us-gaap/2025#ConcentrationRiskByTypeAxis',
+      member_uri: 'http://fasb.org/us-gaap/2025#CommercialMember', // not in dict → dimLabel fallback
+      is_explicit: true,
+      is_typed: false,
+    },
+  ]
+  const labelQuery: SecQuery = async (cypher) => {
+    if (cypher.includes('FACT_HAS_UNIT')) return []
+    if (cypher.includes('STRUCTURE_HAS_ASSOCIATION')) return []
+    if (cypher.includes('FACT_HAS_DIMENSION')) return dimRows
+    if (cypher.includes('FACT_HAS_ELEMENT')) return factRows
+    return []
+  }
+
+  it('fetchSecReportShell builds the label dictionary from LABELS_Q', async () => {
+    const shellQuery: SecQuery = async (cypher) => {
+      if (cypher.includes('TAXONOMY_HAS_LABEL'))
+        return [
+          { element_uri: 'http://x#A', role: STD, value: 'Alpha' },
+          {
+            element_uri: 'http://x#A',
+            role: 'http://www.xbrl.org/2003/role/terseLabel',
+            value: 'A',
+          },
+        ]
+      if (cypher.includes('ENTITY_HAS_REPORT')) return [{ entity_id: 'e', entity_name: 'Co' }]
+      return [] // SECTIONS_Q
+    }
+    const built = await fetchSecReportShell(shellQuery, 'r1')
+    expect(built.labels.byElement.get('http://x#A')?.get(STD)).toBe('Alpha')
+  })
+
+  it('prefers the report label for a fact concept, humanizing only as fallback', async () => {
+    const report = await fetchSecSection(labelQuery, labelShell, labelSection)
+    expect(report.elements['us-gaap:PropertyPlantAndEquipmentNet'].label).toBe(
+      'Property, Plant and Equipment, Net'
+    )
+    expect(report.elements['us-gaap:OtherAssetsNoncurrent'].label).toBe('Other Assets Noncurrent')
+  })
+
+  it('prefers the report label for a dimension member, humanizing only as fallback', async () => {
+    const report = await fetchSecSection(labelQuery, labelShell, labelSection)
+    const ppe = report.facts.find((f) => f.id === 'f-ppe')!
+    expect(ppe.dimensions?.[0].memberLabel).toBe('Retail')
+    const other = report.facts.find((f) => f.id === 'f-other')!
+    expect(other.dimensions?.[0].memberLabel).toBe('Commercial')
   })
 })
 
