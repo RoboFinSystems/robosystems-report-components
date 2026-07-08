@@ -12,6 +12,8 @@
  * is what makes the rendering source-agnostic.
  */
 
+import type { SectionKind } from './sections'
+
 export type PeriodType = 'instant' | 'duration'
 export type BalanceType = 'debit' | 'credit'
 
@@ -168,7 +170,12 @@ export interface StructureInfo {
   id: string
   blockType: string
   roleUri: string | null
+  /** Clean display title (any SEC `NNN - Type - ` prefix stripped). */
   structureName: string | null
+  /** Full role definition, verbatim (e.g. "9952153 - Statement - …"), for hover. */
+  definition?: string | null
+  /** Coarse grouping (Statement / Disclosure / Document / Cover); null/absent for non-SEC. */
+  kind?: SectionKind | null
   /**
    * Filing sequence for ordering sections (SEC `Structure.number`). When present,
    * `buildStatements` orders by it instead of the canonical `BLOCK_ORDER` — a real
@@ -359,6 +366,10 @@ export interface PivotTable {
   blockType: string
   title: string
   structureName: string | null
+  /** Full role definition (for hover/context); null when unavailable. */
+  definition: string | null
+  /** Coarse grouping for the TOC; null for non-SEC sections. */
+  kind: SectionKind | null
   /** Aspects held fixed for the whole table, shown as header bars. */
   slicers: PivotSlicer[]
   /** Column header rows, outermost level first (period over members). */

@@ -39,6 +39,7 @@ import type {
   StructureInfo,
 } from './model'
 import { calcSubtotals } from './project'
+import type { SectionKind } from './sections'
 
 // ── Aspect / signature helpers ──────────────────────────────────────────────
 
@@ -736,6 +737,8 @@ export function buildPivot(
     blockType: ib.blockType,
     title,
     structureName: ib.structureId ? null : (structure?.structureName ?? ib.label ?? null),
+    definition: structure?.definition ?? null,
+    kind: structure?.kind ?? null,
     slicers: buildSlicers(model, facts, config),
     columnHeaders,
     columns,
@@ -745,9 +748,16 @@ export function buildPivot(
   }
 }
 
-/** Section metadata (id + display title) for a report, in canonical order. */
-export function reportSections(model: NormalizedReport): Array<{ id: string; title: string }> {
-  return buildPivots(model).map((p) => ({ id: p.ib.id, title: p.title }))
+/** Section metadata (id + display title, full definition, kind) in canonical order. */
+export function reportSections(
+  model: NormalizedReport
+): Array<{ id: string; title: string; definition: string | null; kind: SectionKind | null }> {
+  return buildPivots(model).map((p) => ({
+    id: p.ib.id,
+    title: p.title,
+    definition: p.definition,
+    kind: p.kind,
+  }))
 }
 
 /**
