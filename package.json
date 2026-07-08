@@ -1,6 +1,6 @@
 {
   "name": "@robosystems/report-components",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Source-agnostic React components for rendering XBRL-grade financial statements",
   "license": "MIT",
   "author": "RFS LLC",
