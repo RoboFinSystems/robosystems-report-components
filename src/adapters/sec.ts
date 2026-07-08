@@ -74,11 +74,24 @@ export interface SecSection {
   factsetIds: string[]
 }
 
-/** The fast first read: entity + the ordered section list, no fact bodies. */
+/**
+ * A report's own label linkbase, resolved once at shell time: element URI →
+ * (label-role URI → label text). The SEC graph anchors each label to the filer's
+ * per-report extension taxonomy and tags the edge with the element it labels
+ * (`element_uri`), so this is the exact, report-scoped label set — free of the
+ * cross-filer collisions on the shared, content-addressed `Label` pool. Keyed by
+ * URI (not qname) so filer-extension elements resolve too.
+ */
+export interface ReportLabels {
+  byElement: Map<string, Map<string, string>>
+}
+
+/** The fast first read: entity + the ordered section list + the label dictionary. */
 export interface SecReportShell {
   reportId: string
   entity: EntityInfo | null
   sections: SecSection[]
+  labels: ReportLabels
 }
 
 // ── Cypher ────────────────────────────────────────────────────────────────────
@@ -101,6 +114,15 @@ RETURN s.identifier AS sid, s.canonical_type AS canonical_type,
        collect(DISTINCT fs.identifier) AS factsets
 ORDER BY number`
 
+// The report's own label linkbase: every label its per-report extension taxonomy
+// defines, tagged with the element it labels (`element_uri`). One small (~1k-row)
+// query yields the report's exact label dictionary, keyed by the report-scoped
+// `element_uri` join key. See the sec-label-scoping design note.
+const LABELS_Q = `
+MATCH (r:Report {identifier: $rid})-[:REPORT_USES_TAXONOMY]->(:Taxonomy)-[tl:TAXONOMY_HAS_LABEL]->(l:Label)
+WHERE tl.element_uri IS NOT NULL
+RETURN tl.element_uri AS element_uri, l.type AS role, l.value AS value`
+
 // Facts for one factset. Anchored on the factset PK; dimensional and consolidated
 // facts alike come through — the pivot engine keys cells by the full aspect
 // signature (element + period + dimensional coordinate), so segment/component
@@ -112,7 +134,7 @@ const FACTS_Q = `
 MATCH (fs:FactSet {identifier: $fsid})-[:FACT_SET_CONTAINS_FACT]->(f:Fact)-[:FACT_HAS_ELEMENT]->(e:Element),
       (f)-[:FACT_HAS_PERIOD]->(p:Period)
 WHERE f.value IS NOT NULL
-RETURN f.identifier AS fid, e.qname AS qname, e.name AS ename, e.balance AS balance,
+RETURN f.identifier AS fid, e.qname AS qname, e.uri AS euri, e.name AS ename, e.balance AS balance,
        e.period_type AS e_period_type, e.is_abstract AS is_abstract, e.is_numeric AS is_numeric,
        e.item_type AS item_type, e.is_shares AS is_shares,
        f.numeric_value AS numeric_value, f.value AS raw_value, f.decimals AS decimals,
@@ -149,8 +171,8 @@ MATCH (s:Structure {identifier: $sid})-[:STRUCTURE_HAS_ASSOCIATION]->(a:Associat
       (a)-[:ASSOCIATION_HAS_FROM_ELEMENT]->(pe:Element),
       (a)-[:ASSOCIATION_HAS_TO_ELEMENT]->(ce:Element)
 RETURN a.association_type AS association_type, a.order_value AS order_value, a.weight AS weight,
-       pe.qname AS parent, pe.name AS parent_name, pe.is_abstract AS parent_abstract,
-       ce.qname AS child, ce.name AS child_name, ce.is_abstract AS child_abstract`
+       pe.qname AS parent, pe.uri AS parent_uri, pe.name AS parent_name, pe.is_abstract AS parent_abstract,
+       ce.qname AS child, ce.uri AS child_uri, ce.name AS child_name, ce.is_abstract AS child_abstract`
 
 // ── Row helpers ────────────────────────────────────────────────────────────────
 
@@ -201,6 +223,66 @@ function dimLabel(local: string | null): string {
   return humanize(local.replace(/(Axis|Member|Domain)$/, '')) || humanize(local)
 }
 
+// ── Report-scoped labels ─────────────────────────────────────────────────────
+
+/** XBRL standard label role — the default display label. */
+const STANDARD_LABEL_ROLE = 'http://www.xbrl.org/2003/role/label'
+/** Terse label role — the fallback when a concept has no standard label. */
+const TERSE_LABEL_ROLE = 'http://www.xbrl.org/2003/role/terseLabel'
+
+/**
+ * XBRL standard labels tag structural elements with a bracketed role suffix —
+ * `Land [Member]`, `Operating Expenses [Abstract]`, and likewise `[Axis]`,
+ * `[Table]`, `[Line Items]`, `[Domain]`. That tag is metadata, not part of the
+ * display name, so strip a trailing one. If stripping would empty the label
+ * (a label that is only the tag), keep the original.
+ */
+const ROLE_SUFFIX_RE = /\s*\[(?:Abstract|Axis|Member|Table|Line Items|Domain)\]\s*$/
+function stripRoleSuffix(label: string): string {
+  const stripped = label.replace(ROLE_SUFFIX_RE, '').trim()
+  return stripped || label
+}
+
+/** Build the report's element-URI → (role → value) label dictionary from LABELS_Q rows. */
+function buildReportLabels(rows: Array<Record<string, unknown>>): ReportLabels {
+  const byElement = new Map<string, Map<string, string>>()
+  for (const row of rows) {
+    const uri = str(row, 'element_uri')
+    const value = str(row, 'value')
+    if (!uri || !value) continue
+    const role = str(row, 'role') ?? STANDARD_LABEL_ROLE
+    let roles = byElement.get(uri)
+    if (!roles) {
+      roles = new Map()
+      byElement.set(uri, roles)
+    }
+    roles.set(role, value)
+  }
+  return { byElement }
+}
+
+/**
+ * The report's label for an element (by URI), preferring `preferredRole` (a
+ * presentation arc's periodStart/periodEnd/total variant) when supplied, then
+ * the standard label, then terse — with the XBRL `[Member]`/`[Axis]`/… role tag
+ * stripped for display. Returns null when the report defined none — the caller
+ * then humanizes the qname as a last resort.
+ */
+function labelFor(
+  labels: ReportLabels,
+  uri: string | null,
+  preferredRole?: string | null
+): string | null {
+  if (!uri) return null
+  const roles = labels.byElement.get(uri)
+  if (!roles) return null
+  const resolved =
+    (preferredRole ? roles.get(preferredRole) : undefined) ??
+    roles.get(STANDARD_LABEL_ROLE) ??
+    roles.get(TERSE_LABEL_ROLE)
+  return resolved ? stripRoleSuffix(resolved) : null
+}
+
 /**
  * Classify an element's numeric kind from its XBRL `item_type` (+ `is_shares`).
  * Per-share and share counts opt out of monetary rescaling; strings/text are not
@@ -241,9 +323,15 @@ export async function fetchSecReportShell(
   query: SecQuery,
   reportId: string
 ): Promise<SecReportShell> {
-  const [entityRows, sectionRows] = await Promise.all([
+  const [entityRows, sectionRows, labelRows] = await Promise.all([
     query(ENTITY_META_Q, { rid: reportId }),
     query(SECTIONS_Q, { rid: reportId }),
+    // Report-scoped labels are an enhancement, not a requirement. A graph that
+    // predates the `TAXONOMY_HAS_LABEL.element_uri` ingest change binder-errors on
+    // LABELS_Q; swallow that so the shell still loads and labels fall back to the
+    // humanized qname. This lets the viewer ship ahead of the SEC reprocess and
+    // light up automatically once the graph carries element_uri.
+    query(LABELS_Q, { rid: reportId }).catch(() => []),
   ])
 
   const sections: SecSection[] = sectionRows
@@ -267,19 +355,31 @@ export async function fetchSecReportShell(
     })
     .filter((s) => s.id && s.factsetIds.length > 0)
 
-  return { reportId, entity: mapEntity(entityRows[0]), sections }
+  return {
+    reportId,
+    entity: mapEntity(entityRows[0]),
+    sections,
+    labels: buildReportLabels(labelRows),
+  }
 }
 
 // ── Single section ────────────────────────────────────────────────────────────
 
-function accumulateElement(elements: Record<string, ElementInfo>, row: Record<string, unknown>) {
+function accumulateElement(
+  elements: Record<string, ElementInfo>,
+  row: Record<string, unknown>,
+  labels: ReportLabels
+) {
   const q = str(row, 'qname')
   if (!q || elements[q]) return
   const balance = str(row, 'balance')
+  const ename = str(row, 'ename')
   elements[q] = {
     id: q,
     qname: q,
-    label: str(row, 'ename') ? humanize(str(row, 'ename') as string) : humanize(q),
+    // Prefer the report's own label (resolved from its per-report taxonomy);
+    // humanizing the element name is the fallback when the report defined none.
+    label: labelFor(labels, str(row, 'euri')) ?? (ename ? humanize(ename) : humanize(q)),
     balance: balance === 'debit' || balance === 'credit' ? balance : null,
     periodType: periodType(str(row, 'e_period_type')),
     abstract: bool(row, 'is_abstract'),
@@ -299,14 +399,21 @@ function accumulateElement(elements: Record<string, ElementInfo>, row: Record<st
 function registerPresentationElement(
   elements: Record<string, ElementInfo>,
   qname: string | null,
+  uri: string | null,
   name: string | null,
-  isAbstract: boolean
+  isAbstract: boolean,
+  labels: ReportLabels
 ): void {
   if (!qname || elements[qname]) return
+  // Prefer the report's own label; else humanize the name (abstract headers drop
+  // the XBRL `Abstract` suffix: `OperatingExpensesAbstract` → `Operating Expenses`).
+  const humanized = name
+    ? humanize(isAbstract ? name.replace(/Abstract$/, '') : name)
+    : humanize(qname)
   elements[qname] = {
     id: qname,
     qname,
-    label: name ? humanize(isAbstract ? name.replace(/Abstract$/, '') : name) : humanize(qname),
+    label: labelFor(labels, uri) ?? humanized,
     balance: null,
     periodType: null,
     abstract: isAbstract,
@@ -361,11 +468,16 @@ export async function fetchSecSection(
     const fid = str(row, 'fid')
     if (!fid) continue
     const memberLocal = str(row, 'member')
+    // Axis/member are elements too — prefer the report's own labels (keyed by the
+    // element URI, which matches the dimension's axis_uri/member_uri), humanizing
+    // the local name only as a fallback.
+    const axisUri = str(row, 'axis_uri')
+    const memberUri = str(row, 'member_uri')
     const qual: DimensionQualifier = {
-      axis: xbrlQname(str(row, 'axis_uri'), str(row, 'axis')),
-      member: memberLocal ? xbrlQname(str(row, 'member_uri'), memberLocal) : null,
-      axisLabel: dimLabel(str(row, 'axis')),
-      memberLabel: dimLabel(memberLocal),
+      axis: xbrlQname(axisUri, str(row, 'axis')),
+      member: memberLocal ? xbrlQname(memberUri, memberLocal) : null,
+      axisLabel: labelFor(shell.labels, axisUri) ?? dimLabel(str(row, 'axis')),
+      memberLabel: labelFor(shell.labels, memberUri) ?? dimLabel(memberLocal),
       explicit: bool(row, 'is_explicit'),
       typedValue: bool(row, 'is_typed') ? str(row, 'member') : null,
     }
@@ -388,7 +500,7 @@ export async function fetchSecSection(
     if (!fid || !element || !period || seenFacts.has(fid)) continue
     seenFacts.add(fid)
 
-    accumulateElement(elements, row)
+    accumulateElement(elements, row, shell.labels)
     accumulatePeriod(periods, row)
 
     const measure = unitByFid.get(fid) ?? null
@@ -429,14 +541,18 @@ export async function fetchSecSection(
     registerPresentationElement(
       elements,
       parent,
+      str(row, 'parent_uri'),
       str(row, 'parent_name'),
-      bool(row, 'parent_abstract')
+      bool(row, 'parent_abstract'),
+      shell.labels
     )
     registerPresentationElement(
       elements,
       child,
+      str(row, 'child_uri'),
       str(row, 'child_name'),
-      bool(row, 'child_abstract')
+      bool(row, 'child_abstract'),
+      shell.labels
     )
     const order = num(row, 'order_value') ?? 0
     const type = str(row, 'association_type')?.toLowerCase()
