@@ -22,6 +22,7 @@ export {
   reportSections,
 } from './pivot'
 export * from './project'
+export * from './sections'
 
 // Components
 export { ExternalTextBlock } from './components/ExternalTextBlock'
@@ -37,12 +38,7 @@ export type { StatementTableProps } from './components/StatementTable'
 export { cypherAdapter } from './adapters/cypher'
 export type { CypherAdapterConfig } from './adapters/cypher'
 export { jsonldFileAdapter, parseJsonld } from './adapters/jsonld'
-export {
-  fetchSecReportShell,
-  fetchSecSection,
-  mergeSecSections,
-  parseStructureDefinition,
-} from './adapters/sec'
+export { fetchSecReportShell, fetchSecSection, mergeSecSections } from './adapters/sec'
 export type { ReportLabels, SecQuery, SecReportShell, SecSection } from './adapters/sec'
 export { parseStore } from './adapters/store'
 export type { ReportAdapter } from './adapters/types'

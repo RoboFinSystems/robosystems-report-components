@@ -12,17 +12,46 @@ import { DataFactory, Store } from 'n3'
 import { IRI, humanize, qname } from '../constants'
 import type {
   CalcAssociation,
+  DimensionQualifier,
   ElementInfo,
   EntityInfo,
   Fact,
   InformationBlock,
   NormalizedReport,
+  NumericKind,
   PeriodInfo,
   PeriodType,
   PresAssociation,
   StructureInfo,
   UnitInfo,
 } from '../model'
+import { parseStructureName } from '../sections'
+
+/**
+ * The holon's value-domain `rs:itemType` maps 1:1 onto the numeric kinds that
+ * drive formatting/scale. perShare and shares never rescale by the statement
+ * factor (else e.g. an EPS of $0.04 in a thousands-scaled statement rounds to
+ * 0); percent/pure/integer format distinctly. Text/date/boolean/decimal have no
+ * numeric kind — the formatter falls back to monetary-or-other.
+ */
+function numericKindFromItemType(itemType: string | undefined): NumericKind | undefined {
+  switch (itemType) {
+    case 'monetary':
+      return 'monetary'
+    case 'perShare':
+      return 'perShare'
+    case 'shares':
+      return 'shares'
+    case 'percent':
+      return 'percent'
+    case 'pure':
+      return 'pure'
+    case 'integer':
+      return 'integer'
+    default:
+      return undefined
+  }
+}
 
 const { namedNode } = DataFactory
 
@@ -52,6 +81,7 @@ export function parseStore(store: Store): NormalizedReport {
   for (const id of subjectsOfType(IRI.Element)) {
     const balance = firstValue(id, IRI.balance)
     const periodType = firstValue(id, IRI.periodType)
+    const itemType = firstValue(id, IRI.itemType) ?? undefined
     elements[id] = {
       id,
       qname: qname(id),
@@ -60,6 +90,8 @@ export function parseStore(store: Store): NormalizedReport {
       periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
       abstract: firstValue(id, IRI.abstract) === 'true',
       monetary: firstValue(id, IRI.monetary) === 'true',
+      itemType,
+      numericKind: numericKindFromItemType(itemType),
     }
   }
 
@@ -110,15 +142,40 @@ export function parseStore(store: Store): NormalizedReport {
   // ── Facts ──
   const facts: Fact[] = []
   for (const id of subjectsOfType(IRI.Fact)) {
+    // Dimensional coordinate (rs:dimension -> rs:Dimension {axis, member, ...}).
+    // Without this every fact reads as consolidated, so a segment breakdown
+    // collapses onto the face-statement cell and can overwrite the real total.
+    const dimensions: DimensionQualifier[] = []
+    for (const d of objects(id, IRI.dimension)) {
+      const axis = firstValue(d.value, IRI.axis)
+      if (!axis) continue
+      const member = firstValue(d.value, IRI.member)
+      const typedValue = firstValue(d.value, IRI.typedValue)
+      dimensions.push({
+        axis,
+        member: member ?? null,
+        axisLabel: elements[axis]?.label ?? humanize(axis),
+        memberLabel: member ? (elements[member]?.label ?? humanize(member)) : (typedValue ?? ''),
+        explicit: firstValue(d.value, IRI.isExplicit) === 'true',
+        typedValue: typedValue ?? null,
+      })
+    }
+    // A fact can belong to several factSets — a summary concept (Total Assets,
+    // Net Income) is presented in more than one structure. Read them ALL; taking
+    // only the first (firstValue) drops the fact from every section but one.
+    const factSets = objects(id, IRI.factSet).map((o) => o.value)
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
       period: firstValue(id, IRI.period) ?? '',
       unit: firstValue(id, IRI.unit),
       entity: firstValue(id, IRI.entity),
-      factSet: firstValue(id, IRI.factSet),
+      factSet: factSets[0] ?? null,
+      factSets: factSets.length ? factSets : undefined,
       value: toNumber(firstValue(id, IRI.numericValue)),
+      textValue: firstValue(id, IRI.stringValue),
       decimals: firstValue(id, IRI.decimals),
+      dimensions: dimensions.length ? dimensions : undefined,
     })
   }
 
@@ -128,6 +185,10 @@ export function parseStore(store: Store): NormalizedReport {
     informationBlocks.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
+      // Match a block to its structure by identity (the rs:structure link),
+      // not by a semantic blockType — a full-fidelity holon carries no
+      // block-type classification, so structureId is how row order is found.
+      structureId: firstValue(id, IRI.structure) ?? undefined,
       factSet: firstValue(id, IRI.factSet),
       label: firstValue(id, IRI.prefLabel),
     })
@@ -137,11 +198,20 @@ export function parseStore(store: Store): NormalizedReport {
   const structures: StructureInfo[] = []
   const assocStructure = new Map<string, string>()
   for (const id of subjectsOfType(IRI.Structure)) {
+    // Split the holon's rs:structureName the same way the SEC adapter splits a
+    // role definition — a clean title + the full definition + a kind — so File
+    // and SEC modes render identical section labels. Non-SEC names pass through.
+    const { definition, title, kind } = parseStructureName(firstValue(id, IRI.structureName))
     structures.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
       roleUri: firstValue(id, IRI.roleUri),
-      structureName: firstValue(id, IRI.structureName),
+      structureName: title,
+      definition,
+      kind,
+      // Filing sequence (SEC role-definition number) so buildPivots orders all
+      // sections by the filer's order rather than the fixed four-primary fallback.
+      order: toNumber(firstValue(id, IRI.structureOrder)) ?? undefined,
     })
     for (const assoc of objects(id, IRI.hasAssociation)) {
       assocStructure.set(assoc.value, id)

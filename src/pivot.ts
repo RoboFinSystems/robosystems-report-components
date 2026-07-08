@@ -39,6 +39,7 @@ import type {
   StructureInfo,
 } from './model'
 import { calcSubtotals } from './project'
+import type { SectionKind } from './sections'
 
 // ── Aspect / signature helpers ──────────────────────────────────────────────
 
@@ -80,7 +81,14 @@ function coordinate(byAxis: Map<string, DimensionQualifier>, axes: string[]): st
 
 /** Facts belonging to one section (its Information Block's factset). */
 function sectionFacts(model: NormalizedReport, ib: InformationBlock): Fact[] {
-  return model.facts.filter((f) => f.factSet !== null && f.factSet === ib.factSet)
+  const target = ib.factSet
+  if (target === null) return []
+  // Membership, not equality: a fact may belong to several factSets (a summary
+  // concept presented in multiple structures), so include it when THIS section is
+  // among them. Fall back to the single `factSet` for adapters that set only one.
+  return model.facts.filter((f) =>
+    (f.factSets ?? (f.factSet !== null ? [f.factSet] : [])).includes(target)
+  )
 }
 
 /** The local part of a qname (`us-gaap:Assets` → `Assets`). */
@@ -590,9 +598,19 @@ export function buildPivot(
 
   // Index every in-table fact by (element, rowCombo, periodEnd, colCombo) so a
   // cell is an O(1) exact-signature lookup — no last-write-wins collisions.
+  //
+  // A fact whose coordinate carries an axis this pivot does NOT show (e.g. the
+  // per-segment revenue facts on the *face* income statement, where the segment
+  // axis is out of scope) is a finer breakdown of a coarser cell. Its dropped
+  // axis would make it key-identical to the consolidated fact and overwrite it —
+  // the classic dimensional collision. Skip it: only facts whose dimensions are
+  // all shown on this pivot's axes populate a cell, so the consolidated
+  // (undimensioned) fact owns the consolidated cell.
+  const shownAxes = new Set([...rowDimAxes, ...colDimAxes])
   const factIndex = new Map<string, Fact>()
   for (const f of facts) {
     const byAxis = memberByAxis(f)
+    if ([...byAxis.keys()].some((axis) => !shownAxes.has(axis))) continue
     const end = model.periods[f.period]?.end ?? ''
     const rowSig = coordinate(byAxis, rowDimAxes)
     const colSig = coordinate(byAxis, colDimAxes)
@@ -726,6 +744,8 @@ export function buildPivot(
     blockType: ib.blockType,
     title,
     structureName: ib.structureId ? null : (structure?.structureName ?? ib.label ?? null),
+    definition: structure?.definition ?? null,
+    kind: structure?.kind ?? null,
     slicers: buildSlicers(model, facts, config),
     columnHeaders,
     columns,
@@ -735,9 +755,16 @@ export function buildPivot(
   }
 }
 
-/** Section metadata (id + display title) for a report, in canonical order. */
-export function reportSections(model: NormalizedReport): Array<{ id: string; title: string }> {
-  return buildPivots(model).map((p) => ({ id: p.ib.id, title: p.title }))
+/** Section metadata (id + display title, full definition, kind) in canonical order. */
+export function reportSections(
+  model: NormalizedReport
+): Array<{ id: string; title: string; definition: string | null; kind: SectionKind | null }> {
+  return buildPivots(model).map((p) => ({
+    id: p.ib.id,
+    title: p.title,
+    definition: p.definition,
+    kind: p.kind,
+  }))
 }
 
 /**

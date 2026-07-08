@@ -3,16 +3,12 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { ReportLabels, SecQuery, SecReportShell, SecSection } from '../src/adapters/sec'
-import {
-  fetchSecReportShell,
-  fetchSecSection,
-  mergeSecSections,
-  parseStructureDefinition,
-} from '../src/adapters/sec'
+import { fetchSecReportShell, fetchSecSection, mergeSecSections } from '../src/adapters/sec'
 import { isExternalFactUrl } from '../src/constants'
 import type { NormalizedReport, PivotTable } from '../src/model'
 import { buildPivots } from '../src/pivot'
 import { footCheck } from '../src/project'
+import { parseStructureDefinition, parseStructureName } from '../src/sections'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const fx = (name: string): Array<Record<string, unknown>> =>
@@ -66,6 +62,28 @@ describe('parseStructureDefinition', () => {
     expect(
       parseStructureDefinition('9952153 - Statement - Consolidated Balance Sheets', 'balance_sheet')
     ).toEqual({ title: 'Consolidated Balance Sheets', kind: 'Statement' })
+  })
+})
+
+describe('parseStructureName (jsonld structure names, guarded)', () => {
+  it('splits a SEC-shaped name into full definition + clean title + kind', () => {
+    expect(parseStructureName('0000001 - Document - Cover')).toEqual({
+      definition: '0000001 - Document - Cover',
+      title: 'Cover',
+      kind: 'Cover',
+    })
+  })
+
+  it('leaves a non-SEC name untouched (no leading sort code)', () => {
+    expect(parseStructureName('Balance Sheet - Detail')).toEqual({
+      definition: 'Balance Sheet - Detail',
+      title: 'Balance Sheet - Detail',
+      kind: null,
+    })
+  })
+
+  it('handles a null name', () => {
+    expect(parseStructureName(null)).toEqual({ definition: null, title: null, kind: null })
   })
 })
 
@@ -172,6 +190,7 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
     id: 'struct-1',
     title: 'Balance Sheet',
     kind: 'Statement',
+    definition: '9999 - Statement - Balance Sheet',
     canonicalType: 'balance_sheet',
     order: 0,
     factsetIds: ['fs-1'],

@@ -53,6 +53,15 @@ function wrapHtml(body: string): string {
   </style></head><body>${body}</body></html>`
 }
 
+/**
+ * An *inline* text-block fact — the disclosure HTML lives in the holon itself
+ * (`rs:stringValue`), not an external CDN URL — rendered in the same sandboxed
+ * frame as the externalized case. Used for holon-authored / offline reports.
+ */
+export function InlineTextBlock({ html }: { html: string }) {
+  return <SandboxedHtml html={html} />
+}
+
 function SandboxedHtml({ html }: { html: string }) {
   const ref = useRef<HTMLIFrameElement>(null)
 
