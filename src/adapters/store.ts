@@ -160,13 +160,18 @@ export function parseStore(store: Store): NormalizedReport {
         typedValue: typedValue ?? null,
       })
     }
+    // A fact can belong to several factSets — a summary concept (Total Assets,
+    // Net Income) is presented in more than one structure. Read them ALL; taking
+    // only the first (firstValue) drops the fact from every section but one.
+    const factSets = objects(id, IRI.factSet).map((o) => o.value)
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
       period: firstValue(id, IRI.period) ?? '',
       unit: firstValue(id, IRI.unit),
       entity: firstValue(id, IRI.entity),
-      factSet: firstValue(id, IRI.factSet),
+      factSet: factSets[0] ?? null,
+      factSets: factSets.length ? factSets : undefined,
       value: toNumber(firstValue(id, IRI.numericValue)),
       textValue: firstValue(id, IRI.stringValue),
       decimals: firstValue(id, IRI.decimals),

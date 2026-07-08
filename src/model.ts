@@ -127,8 +127,14 @@ export interface Fact {
   unit: string | null
   /** Entity IRI. */
   entity: string | null
-  /** FactSet IRI — the grouping key shared with an Information Block. */
+  /** FactSet IRI — the grouping key shared with an Information Block. `factSet`
+   * is the first; `factSets` carries all of them (see below). */
   factSet: string | null
+  /** Every FactSet a fact belongs to. A summary concept (Total Assets, Net
+   * Income) is presented in more than one structure, so it lands in each — the
+   * pivot matches a section by membership, not single-value equality. Absent when
+   * the adapter sets a single `factSet` (e.g. the SEC adapter re-keys per section). */
+  factSets?: string[]
   value: number | null
   decimals: string | null
   /**
