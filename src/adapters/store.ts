@@ -25,6 +25,7 @@ import type {
   StructureInfo,
   UnitInfo,
 } from '../model'
+import { parseStructureName } from '../sections'
 
 /**
  * The holon's value-domain `rs:itemType` maps 1:1 onto the numeric kinds that
@@ -192,11 +193,17 @@ export function parseStore(store: Store): NormalizedReport {
   const structures: StructureInfo[] = []
   const assocStructure = new Map<string, string>()
   for (const id of subjectsOfType(IRI.Structure)) {
+    // Split the holon's rs:structureName the same way the SEC adapter splits a
+    // role definition — a clean title + the full definition + a kind — so File
+    // and SEC modes render identical section labels. Non-SEC names pass through.
+    const { definition, title, kind } = parseStructureName(firstValue(id, IRI.structureName))
     structures.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
       roleUri: firstValue(id, IRI.roleUri),
-      structureName: firstValue(id, IRI.structureName),
+      structureName: title,
+      definition,
+      kind,
       // Filing sequence (SEC role-definition number) so buildPivots orders all
       // sections by the filer's order rather than the fixed four-primary fallback.
       order: toNumber(firstValue(id, IRI.structureOrder)) ?? undefined,

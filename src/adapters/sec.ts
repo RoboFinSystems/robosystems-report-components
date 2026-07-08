@@ -48,6 +48,7 @@ import type {
   StructureInfo,
   UnitInfo,
 } from '../model'
+import { parseStructureDefinition, type SectionKind } from '../sections'
 
 /** Injected transport — runs a read-only Cypher query and returns its rows. */
 export type SecQuery = (
@@ -62,7 +63,9 @@ export interface SecSection {
   /** Human title, e.g. "Consolidated Balance Sheets" (definition prefix stripped). */
   title: string
   /** Coarse grouping for the table of contents. */
-  kind: 'Statement' | 'Disclosure' | 'Document' | 'Cover' | 'Other'
+  kind: SectionKind
+  /** The full role definition (e.g. "9952153 - Statement - …"), for hover/context. */
+  definition: string | null
   /** `canonical_type` when the section is a recognized core statement, else null. */
   canonicalType: string | null
   /** Filing sequence (position in the ordered section list). */
@@ -219,54 +222,6 @@ function deriveNumericKind(row: Record<string, unknown>): NumericKind | undefine
   return balance === 'debit' || balance === 'credit' ? 'monetary' : 'other'
 }
 
-/**
- * The primary financial statements. Only these `canonical_type`s belong in the
- * TOC's "Financial Statements" group — other canonical types (rollforwards,
- * hierarchies, `(Details)` networks) are disclosures, classified by their
- * definition's type word instead.
- */
-const CORE_STATEMENT_TYPES = new Set([
-  'balance_sheet',
-  'income_statement',
-  'cash_flow_statement',
-  'equity_statement',
-  'comprehensive_income',
-])
-
-/**
- * Split an XBRL `Structure.definition` into a human title + a coarse kind.
- * Definitions look like `"9952153 - Statement - Consolidated Balance Sheets"` or
- * `"0000001 - Document - Cover Page"` — a `"NNNN - <Type> - <Title>"` shape whose
- * middle word (Statement / Disclosure / Document) drives the kind. A core
- * canonical statement always reads as a Statement so the primaries group cleanly.
- */
-export function parseStructureDefinition(
-  definition: string | null,
-  canonicalType: string | null
-): { title: string; kind: SecSection['kind'] } {
-  const raw = (definition ?? '').trim()
-  const parts = raw.split(' - ')
-  let type = ''
-  let title = raw
-  if (parts.length >= 3) {
-    type = parts[1].trim()
-    title = parts.slice(2).join(' - ').trim()
-  } else if (parts.length === 2) {
-    title = parts[1].trim()
-  }
-
-  let kind: SecSection['kind'] = 'Other'
-  if (/cover/i.test(title)) kind = 'Cover'
-  else if (type === 'Statement') kind = 'Statement'
-  else if (type === 'Disclosure') kind = 'Disclosure'
-  else if (type === 'Document') kind = 'Document'
-  // A core statement is always a Statement; a non-core canonical type (e.g.
-  // GoodwillRollForward) stays whatever its definition type word made it.
-  if (canonicalType && CORE_STATEMENT_TYPES.has(canonicalType)) kind = 'Statement'
-
-  return { title: title || raw || canonicalType || 'Section', kind }
-}
-
 // ── Shell ───────────────────────────────────────────────────────────────────
 
 function mapEntity(row: Record<string, unknown> | undefined): EntityInfo | null {
@@ -304,6 +259,7 @@ export async function fetchSecReportShell(
         id: str(row, 'sid') ?? '',
         title,
         kind,
+        definition: str(row, 'definition'),
         canonicalType: str(row, 'canonical_type'),
         order,
         factsetIds: factsets,
@@ -510,6 +466,8 @@ export async function fetchSecSection(
     blockType: section.canonicalType ?? '',
     roleUri: null,
     structureName: section.title,
+    definition: section.definition,
+    kind: section.kind,
     order: section.order,
   }
 
