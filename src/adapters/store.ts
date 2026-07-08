@@ -12,6 +12,7 @@ import { DataFactory, Store } from 'n3'
 import { IRI, humanize, qname } from '../constants'
 import type {
   CalcAssociation,
+  DimensionQualifier,
   ElementInfo,
   EntityInfo,
   Fact,
@@ -111,6 +112,26 @@ export function parseStore(store: Store): NormalizedReport {
   // ── Facts ──
   const facts: Fact[] = []
   for (const id of subjectsOfType(IRI.Fact)) {
+    // Dimensional coordinate (rs:dimension -> rs:Dimension {axis, member, ...}).
+    // Without this every fact reads as consolidated, so a segment breakdown
+    // collapses onto the face-statement cell and can overwrite the real total.
+    const dimensions: DimensionQualifier[] = []
+    for (const d of objects(id, IRI.dimension)) {
+      const axis = firstValue(d.value, IRI.axis)
+      if (!axis) continue
+      const member = firstValue(d.value, IRI.member)
+      const typedValue = firstValue(d.value, IRI.typedValue)
+      dimensions.push({
+        axis,
+        member: member ?? null,
+        axisLabel: elements[axis]?.label ?? humanize(axis),
+        memberLabel: member
+          ? (elements[member]?.label ?? humanize(member))
+          : (typedValue ?? ''),
+        explicit: firstValue(d.value, IRI.isExplicit) === 'true',
+        typedValue: typedValue ?? null,
+      })
+    }
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
@@ -121,6 +142,7 @@ export function parseStore(store: Store): NormalizedReport {
       value: toNumber(firstValue(id, IRI.numericValue)),
       textValue: firstValue(id, IRI.stringValue),
       decimals: firstValue(id, IRI.decimals),
+      dimensions: dimensions.length ? dimensions : undefined,
     })
   }
 

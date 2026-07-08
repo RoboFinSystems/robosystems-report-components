@@ -590,9 +590,19 @@ export function buildPivot(
 
   // Index every in-table fact by (element, rowCombo, periodEnd, colCombo) so a
   // cell is an O(1) exact-signature lookup — no last-write-wins collisions.
+  //
+  // A fact whose coordinate carries an axis this pivot does NOT show (e.g. the
+  // per-segment revenue facts on the *face* income statement, where the segment
+  // axis is out of scope) is a finer breakdown of a coarser cell. Its dropped
+  // axis would make it key-identical to the consolidated fact and overwrite it —
+  // the classic dimensional collision. Skip it: only facts whose dimensions are
+  // all shown on this pivot's axes populate a cell, so the consolidated
+  // (undimensioned) fact owns the consolidated cell.
+  const shownAxes = new Set([...rowDimAxes, ...colDimAxes])
   const factIndex = new Map<string, Fact>()
   for (const f of facts) {
     const byAxis = memberByAxis(f)
+    if ([...byAxis.keys()].some((axis) => !shownAxes.has(axis))) continue
     const end = model.periods[f.period]?.end ?? ''
     const rowSig = coordinate(byAxis, rowDimAxes)
     const colSig = coordinate(byAxis, colDimAxes)
