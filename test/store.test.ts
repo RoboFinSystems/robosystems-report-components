@@ -59,4 +59,52 @@ describe('holon store adapter', () => {
     expect(fact?.textValue).toBe('<div>Accounting policy narrative.</div>')
     expect(model.elements['http://ex/el1']?.itemType).toBe('textBlock')
   })
+
+  it('reads Fact.dimensions from rs:dimension (with axis/member labels)', async () => {
+    const doc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/fd',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/rev' },
+          [`${RS}period`]: { '@id': 'http://ex/p' },
+          [`${RS}numericValue`]: 60,
+          [`${RS}dimension`]: { '@id': 'http://ex/d1' },
+        },
+        {
+          '@id': 'http://ex/d1',
+          '@type': `${RS}Dimension`,
+          [`${RS}axis`]: { '@id': 'http://ex/axis' },
+          [`${RS}member`]: { '@id': 'http://ex/mem' },
+          [`${RS}isExplicit`]: true,
+        },
+        { '@id': 'http://ex/axis', '@type': `${RS}Element`, [`${SKOS}prefLabel`]: 'Segments' },
+        { '@id': 'http://ex/mem', '@type': `${RS}Element`, [`${SKOS}prefLabel`]: 'Product' },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    const fact = model.facts.find((f) => f.id === 'http://ex/fd')
+    expect(fact?.dimensions).toHaveLength(1)
+    expect(fact?.dimensions?.[0]).toMatchObject({
+      axis: 'http://ex/axis',
+      member: 'http://ex/mem',
+      axisLabel: 'Segments',
+      memberLabel: 'Product',
+      explicit: true,
+    })
+  })
+
+  it('derives ElementInfo.numericKind from itemType (per-share opts out of scaling)', async () => {
+    const doc = {
+      '@graph': [
+        { '@id': 'http://ex/eps', '@type': `${RS}Element`, [`${RS}itemType`]: 'perShare' },
+        { '@id': 'http://ex/rev', '@type': `${RS}Element`, [`${RS}itemType`]: 'monetary' },
+        { '@id': 'http://ex/dec', '@type': `${RS}Element`, [`${RS}itemType`]: 'decimal' },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    expect(model.elements['http://ex/eps']?.numericKind).toBe('perShare')
+    expect(model.elements['http://ex/rev']?.numericKind).toBe('monetary')
+    expect(model.elements['http://ex/dec']?.numericKind).toBeUndefined()
+  })
 })

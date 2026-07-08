@@ -12,17 +12,45 @@ import { DataFactory, Store } from 'n3'
 import { IRI, humanize, qname } from '../constants'
 import type {
   CalcAssociation,
+  DimensionQualifier,
   ElementInfo,
   EntityInfo,
   Fact,
   InformationBlock,
   NormalizedReport,
+  NumericKind,
   PeriodInfo,
   PeriodType,
   PresAssociation,
   StructureInfo,
   UnitInfo,
 } from '../model'
+
+/**
+ * The holon's value-domain `rs:itemType` maps 1:1 onto the numeric kinds that
+ * drive formatting/scale. perShare and shares never rescale by the statement
+ * factor (else e.g. an EPS of $0.04 in a thousands-scaled statement rounds to
+ * 0); percent/pure/integer format distinctly. Text/date/boolean/decimal have no
+ * numeric kind — the formatter falls back to monetary-or-other.
+ */
+function numericKindFromItemType(itemType: string | undefined): NumericKind | undefined {
+  switch (itemType) {
+    case 'monetary':
+      return 'monetary'
+    case 'perShare':
+      return 'perShare'
+    case 'shares':
+      return 'shares'
+    case 'percent':
+      return 'percent'
+    case 'pure':
+      return 'pure'
+    case 'integer':
+      return 'integer'
+    default:
+      return undefined
+  }
+}
 
 const { namedNode } = DataFactory
 
@@ -52,6 +80,7 @@ export function parseStore(store: Store): NormalizedReport {
   for (const id of subjectsOfType(IRI.Element)) {
     const balance = firstValue(id, IRI.balance)
     const periodType = firstValue(id, IRI.periodType)
+    const itemType = firstValue(id, IRI.itemType) ?? undefined
     elements[id] = {
       id,
       qname: qname(id),
@@ -60,7 +89,8 @@ export function parseStore(store: Store): NormalizedReport {
       periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
       abstract: firstValue(id, IRI.abstract) === 'true',
       monetary: firstValue(id, IRI.monetary) === 'true',
-      itemType: firstValue(id, IRI.itemType) ?? undefined,
+      itemType,
+      numericKind: numericKindFromItemType(itemType),
     }
   }
 
@@ -111,6 +141,24 @@ export function parseStore(store: Store): NormalizedReport {
   // ── Facts ──
   const facts: Fact[] = []
   for (const id of subjectsOfType(IRI.Fact)) {
+    // Dimensional coordinate (rs:dimension -> rs:Dimension {axis, member, ...}).
+    // Without this every fact reads as consolidated, so a segment breakdown
+    // collapses onto the face-statement cell and can overwrite the real total.
+    const dimensions: DimensionQualifier[] = []
+    for (const d of objects(id, IRI.dimension)) {
+      const axis = firstValue(d.value, IRI.axis)
+      if (!axis) continue
+      const member = firstValue(d.value, IRI.member)
+      const typedValue = firstValue(d.value, IRI.typedValue)
+      dimensions.push({
+        axis,
+        member: member ?? null,
+        axisLabel: elements[axis]?.label ?? humanize(axis),
+        memberLabel: member ? (elements[member]?.label ?? humanize(member)) : (typedValue ?? ''),
+        explicit: firstValue(d.value, IRI.isExplicit) === 'true',
+        typedValue: typedValue ?? null,
+      })
+    }
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
@@ -121,6 +169,7 @@ export function parseStore(store: Store): NormalizedReport {
       value: toNumber(firstValue(id, IRI.numericValue)),
       textValue: firstValue(id, IRI.stringValue),
       decimals: firstValue(id, IRI.decimals),
+      dimensions: dimensions.length ? dimensions : undefined,
     })
   }
 
