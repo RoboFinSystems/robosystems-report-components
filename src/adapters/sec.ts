@@ -227,6 +227,19 @@ const STANDARD_LABEL_ROLE = 'http://www.xbrl.org/2003/role/label'
 /** Terse label role — the fallback when a concept has no standard label. */
 const TERSE_LABEL_ROLE = 'http://www.xbrl.org/2003/role/terseLabel'
 
+/**
+ * XBRL standard labels tag structural elements with a bracketed role suffix —
+ * `Land [Member]`, `Operating Expenses [Abstract]`, and likewise `[Axis]`,
+ * `[Table]`, `[Line Items]`, `[Domain]`. That tag is metadata, not part of the
+ * display name, so strip a trailing one. If stripping would empty the label
+ * (a label that is only the tag), keep the original.
+ */
+const ROLE_SUFFIX_RE = /\s*\[(?:Abstract|Axis|Member|Table|Line Items|Domain)\]\s*$/
+function stripRoleSuffix(label: string): string {
+  const stripped = label.replace(ROLE_SUFFIX_RE, '').trim()
+  return stripped || label
+}
+
 /** Build the report's element-URI → (role → value) label dictionary from LABELS_Q rows. */
 function buildReportLabels(rows: Array<Record<string, unknown>>): ReportLabels {
   const byElement = new Map<string, Map<string, string>>()
@@ -248,8 +261,9 @@ function buildReportLabels(rows: Array<Record<string, unknown>>): ReportLabels {
 /**
  * The report's label for an element (by URI), preferring `preferredRole` (a
  * presentation arc's periodStart/periodEnd/total variant) when supplied, then
- * the standard label, then terse. Returns null when the report defined none —
- * the caller then humanizes the qname as a last resort.
+ * the standard label, then terse — with the XBRL `[Member]`/`[Axis]`/… role tag
+ * stripped for display. Returns null when the report defined none — the caller
+ * then humanizes the qname as a last resort.
  */
 function labelFor(
   labels: ReportLabels,
@@ -259,11 +273,11 @@ function labelFor(
   if (!uri) return null
   const roles = labels.byElement.get(uri)
   if (!roles) return null
-  if (preferredRole) {
-    const preferred = roles.get(preferredRole)
-    if (preferred) return preferred
-  }
-  return roles.get(STANDARD_LABEL_ROLE) ?? roles.get(TERSE_LABEL_ROLE) ?? null
+  const resolved =
+    (preferredRole ? roles.get(preferredRole) : undefined) ??
+    roles.get(STANDARD_LABEL_ROLE) ??
+    roles.get(TERSE_LABEL_ROLE)
+  return resolved ? stripRoleSuffix(resolved) : null
 }
 
 /**

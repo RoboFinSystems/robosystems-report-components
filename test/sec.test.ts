@@ -153,8 +153,13 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
         'http://fasb.org/us-gaap/2025#PropertyPlantAndEquipmentNet',
         new Map([[STD, 'Property, Plant and Equipment, Net']]),
       ],
+      // XBRL standard labels carry a bracketed role tag; the adapter strips it.
+      [
+        'http://fasb.org/srt/2025#ProductOrServiceAxis',
+        new Map([[STD, 'Products and Services [Axis]']]),
+      ],
       // a filer-extension member whose qname prefix isn't reconstructible — URI keying still resolves it
-      ['http://filer.example.com/20240101#RetailMember', new Map([[STD, 'Retail']])],
+      ['http://filer.example.com/20240101#RetailMember', new Map([[STD, 'Retail [Member]']])],
     ]),
   }
   const labelShell: SecReportShell = {
@@ -259,6 +264,14 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
     expect(ppe.dimensions?.[0].memberLabel).toBe('Retail')
     const other = report.facts.find((f) => f.id === 'f-other')!
     expect(other.dimensions?.[0].memberLabel).toBe('Commercial')
+  })
+
+  it('strips the XBRL [Member]/[Axis] role tag from resolved labels', async () => {
+    const report = await fetchSecSection(labelQuery, labelShell, labelSection)
+    const ppe = report.facts.find((f) => f.id === 'f-ppe')!
+    // dictionary values were 'Retail [Member]' / 'Products and Services [Axis]'
+    expect(ppe.dimensions?.[0].memberLabel).toBe('Retail')
+    expect(ppe.dimensions?.[0].axisLabel).toBe('Products and Services')
   })
 })
 
