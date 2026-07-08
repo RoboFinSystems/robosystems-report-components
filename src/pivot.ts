@@ -81,7 +81,14 @@ function coordinate(byAxis: Map<string, DimensionQualifier>, axes: string[]): st
 
 /** Facts belonging to one section (its Information Block's factset). */
 function sectionFacts(model: NormalizedReport, ib: InformationBlock): Fact[] {
-  return model.facts.filter((f) => f.factSet !== null && f.factSet === ib.factSet)
+  const target = ib.factSet
+  if (target === null) return []
+  // Membership, not equality: a fact may belong to several factSets (a summary
+  // concept presented in multiple structures), so include it when THIS section is
+  // among them. Fall back to the single `factSet` for adapters that set only one.
+  return model.facts.filter((f) =>
+    (f.factSets ?? (f.factSet !== null ? [f.factSet] : [])).includes(target)
+  )
 }
 
 /** The local part of a qname (`us-gaap:Assets` → `Assets`). */

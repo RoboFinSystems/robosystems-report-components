@@ -107,4 +107,26 @@ describe('holon store adapter', () => {
     expect(model.elements['http://ex/rev']?.numericKind).toBe('monetary')
     expect(model.elements['http://ex/dec']?.numericKind).toBeUndefined()
   })
+
+  it('reads ALL of a fact’s factSets, not just the first', async () => {
+    // A summary concept (Total Assets) presented in several structures carries
+    // multiple rs:factSet triples. Reading only the first orphaned it from every
+    // section but one.
+    const doc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/f-assets',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/Assets' },
+          [`${RS}period`]: { '@id': 'http://ex/p' },
+          [`${RS}numericValue`]: 900,
+          [`${RS}factSet`]: [{ '@id': 'http://ex/fsNotes' }, { '@id': 'http://ex/fsBS' }],
+        },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    const fact = model.facts.find((f) => f.id === 'http://ex/f-assets')
+    expect(fact?.factSets).toEqual(expect.arrayContaining(['http://ex/fsNotes', 'http://ex/fsBS']))
+    expect(fact?.factSets).toHaveLength(2)
+  })
 })
