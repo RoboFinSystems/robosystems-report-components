@@ -154,9 +154,7 @@ export function parseStore(store: Store): NormalizedReport {
         axis,
         member: member ?? null,
         axisLabel: elements[axis]?.label ?? humanize(axis),
-        memberLabel: member
-          ? (elements[member]?.label ?? humanize(member))
-          : (typedValue ?? ''),
+        memberLabel: member ? (elements[member]?.label ?? humanize(member)) : (typedValue ?? ''),
         explicit: firstValue(d.value, IRI.isExplicit) === 'true',
         typedValue: typedValue ?? null,
       })

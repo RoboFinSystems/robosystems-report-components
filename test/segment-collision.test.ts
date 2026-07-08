@@ -20,9 +20,7 @@ function report(): NormalizedReport {
     informationBlocks: [
       { id: 's', blockType: '', factSet: 'fs', label: 'Operations', structureId: 's' },
     ],
-    structures: [
-      { id: 's', blockType: '', roleUri: null, structureName: 'Operations', order: 0 },
-    ],
+    structures: [{ id: 's', blockType: '', roleUri: null, structureName: 'Operations', order: 0 }],
     facts: [
       {
         id: 'consolidated',
