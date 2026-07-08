@@ -49,6 +49,12 @@ export interface ElementInfo {
    * to `monetary ? 'monetary' : 'other'`.
    */
   numericKind?: NumericKind
+  /**
+   * Value domain (`rs:itemType`): `textBlock` / `monetary` / `shares` / `decimal`
+   * / `date` / `boolean` / `string`. `textBlock` marks an element whose facts are
+   * rendered HTML disclosures — orthogonal to elementType's structural role.
+   */
+  itemType?: string
 }
 
 /** A reporting period — an instant (balance sheet) or a duration (flows). */
