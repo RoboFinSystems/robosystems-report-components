@@ -250,6 +250,20 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
     expect(built.labels.byElement.get('http://x#A')?.get(STD)).toBe('Alpha')
   })
 
+  it('degrades gracefully when LABELS_Q fails (graph without element_uri)', async () => {
+    // A pre-reprocess graph binder-errors on tl.element_uri; the transport throws.
+    // The shell must still load (labels empty → humanized fallback downstream),
+    // so the viewer is safe to ship ahead of the SEC reprocess.
+    const preReprocessQuery: SecQuery = async (cypher) => {
+      if (cypher.includes('TAXONOMY_HAS_LABEL')) throw new Error('Query syntax error')
+      if (cypher.includes('ENTITY_HAS_REPORT')) return [{ entity_id: 'e', entity_name: 'Co' }]
+      return []
+    }
+    const built = await fetchSecReportShell(preReprocessQuery, 'r1')
+    expect(built.entity?.name).toBe('Co')
+    expect(built.labels.byElement.size).toBe(0)
+  })
+
   it('prefers the report label for a fact concept, humanizing only as fallback', async () => {
     const report = await fetchSecSection(labelQuery, labelShell, labelSection)
     expect(report.elements['us-gaap:PropertyPlantAndEquipmentNet'].label).toBe(

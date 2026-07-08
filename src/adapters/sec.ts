@@ -371,7 +371,12 @@ export async function fetchSecReportShell(
   const [entityRows, sectionRows, labelRows] = await Promise.all([
     query(ENTITY_META_Q, { rid: reportId }),
     query(SECTIONS_Q, { rid: reportId }),
-    query(LABELS_Q, { rid: reportId }),
+    // Report-scoped labels are an enhancement, not a requirement. A graph that
+    // predates the `TAXONOMY_HAS_LABEL.element_uri` ingest change binder-errors on
+    // LABELS_Q; swallow that so the shell still loads and labels fall back to the
+    // humanized qname. This lets the viewer ship ahead of the SEC reprocess and
+    // light up automatically once the graph carries element_uri.
+    query(LABELS_Q, { rid: reportId }).catch(() => []),
   ])
 
   const sections: SecSection[] = sectionRows
