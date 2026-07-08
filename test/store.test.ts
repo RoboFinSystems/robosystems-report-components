@@ -93,4 +93,18 @@ describe('holon store adapter', () => {
       explicit: true,
     })
   })
+
+  it('derives ElementInfo.numericKind from itemType (per-share opts out of scaling)', async () => {
+    const doc = {
+      '@graph': [
+        { '@id': 'http://ex/eps', '@type': `${RS}Element`, [`${RS}itemType`]: 'perShare' },
+        { '@id': 'http://ex/rev', '@type': `${RS}Element`, [`${RS}itemType`]: 'monetary' },
+        { '@id': 'http://ex/dec', '@type': `${RS}Element`, [`${RS}itemType`]: 'decimal' },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    expect(model.elements['http://ex/eps']?.numericKind).toBe('perShare')
+    expect(model.elements['http://ex/rev']?.numericKind).toBe('monetary')
+    expect(model.elements['http://ex/dec']?.numericKind).toBeUndefined()
+  })
 })

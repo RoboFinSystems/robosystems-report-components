@@ -18,12 +18,39 @@ import type {
   Fact,
   InformationBlock,
   NormalizedReport,
+  NumericKind,
   PeriodInfo,
   PeriodType,
   PresAssociation,
   StructureInfo,
   UnitInfo,
 } from '../model'
+
+/**
+ * The holon's value-domain `rs:itemType` maps 1:1 onto the numeric kinds that
+ * drive formatting/scale. perShare and shares never rescale by the statement
+ * factor (else e.g. an EPS of $0.04 in a thousands-scaled statement rounds to
+ * 0); percent/pure/integer format distinctly. Text/date/boolean/decimal have no
+ * numeric kind — the formatter falls back to monetary-or-other.
+ */
+function numericKindFromItemType(itemType: string | undefined): NumericKind | undefined {
+  switch (itemType) {
+    case 'monetary':
+      return 'monetary'
+    case 'perShare':
+      return 'perShare'
+    case 'shares':
+      return 'shares'
+    case 'percent':
+      return 'percent'
+    case 'pure':
+      return 'pure'
+    case 'integer':
+      return 'integer'
+    default:
+      return undefined
+  }
+}
 
 const { namedNode } = DataFactory
 
@@ -53,6 +80,7 @@ export function parseStore(store: Store): NormalizedReport {
   for (const id of subjectsOfType(IRI.Element)) {
     const balance = firstValue(id, IRI.balance)
     const periodType = firstValue(id, IRI.periodType)
+    const itemType = firstValue(id, IRI.itemType) ?? undefined
     elements[id] = {
       id,
       qname: qname(id),
@@ -61,7 +89,8 @@ export function parseStore(store: Store): NormalizedReport {
       periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
       abstract: firstValue(id, IRI.abstract) === 'true',
       monetary: firstValue(id, IRI.monetary) === 'true',
-      itemType: firstValue(id, IRI.itemType) ?? undefined,
+      itemType,
+      numericKind: numericKindFromItemType(itemType),
     }
   }
 
