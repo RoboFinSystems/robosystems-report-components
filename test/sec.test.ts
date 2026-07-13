@@ -251,9 +251,15 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
     return []
   }
 
-  it('fetchSecReportShell builds the label dictionary from LABELS_Q', async () => {
-    const shellQuery: SecQuery = async (cypher) => {
-      if (cypher.includes('TAXONOMY_HAS_LABEL'))
+  it('builds the label dictionary via the two-step taxonomy-anchored fetch', async () => {
+    // LABELS_ENABLED is on: the shell resolves the report's taxonomy id(s) first
+    // (REPORT_USES_TAXONOMY), then pulls labels per taxonomy bound by PK ($tid) —
+    // the split that keeps the planner probing TAXONOMY_HAS_LABEL instead of
+    // scanning it. Dictionary is keyed by element_uri; standard beats terse.
+    let labelBoundByPk = false
+    const shellQuery: SecQuery = async (cypher, params = {}) => {
+      if (cypher.includes('TAXONOMY_HAS_LABEL')) {
+        labelBoundByPk = params.tid === 'tax-1' // bound by PK, not via traversal
         return [
           { element_uri: 'http://x#A', role: STD, value: 'Alpha' },
           {
@@ -262,19 +268,23 @@ describe('sec adapter — report-scoped labels via the per-report taxonomy', () 
             value: 'A',
           },
         ]
+      }
+      if (cypher.includes('REPORT_USES_TAXONOMY')) return [{ tid: 'tax-1' }]
       if (cypher.includes('ENTITY_HAS_REPORT')) return [{ entity_id: 'e', entity_name: 'Co' }]
       return [] // SECTIONS_Q
     }
     const built = await fetchSecReportShell(shellQuery, 'r1')
+    expect(labelBoundByPk).toBe(true)
     expect(built.labels.byElement.get('http://x#A')?.get(STD)).toBe('Alpha')
   })
 
-  it('degrades gracefully when LABELS_Q fails (graph without element_uri)', async () => {
-    // A pre-reprocess graph binder-errors on tl.element_uri; the transport throws.
-    // The shell must still load (labels empty → humanized fallback downstream),
-    // so the viewer is safe to ship ahead of the SEC reprocess.
+  it('degrades gracefully when the label fetch fails (graph without element_uri)', async () => {
+    // A pre-reprocess graph binder-errors on tl.element_uri; step 2 (LABELS_Q)
+    // throws. The shell must still load (labels empty → humanized fallback
+    // downstream), so the viewer is safe against a graph that predates the ingest.
     const preReprocessQuery: SecQuery = async (cypher) => {
       if (cypher.includes('TAXONOMY_HAS_LABEL')) throw new Error('Query syntax error')
+      if (cypher.includes('REPORT_USES_TAXONOMY')) return [{ tid: 'tax-1' }]
       if (cypher.includes('ENTITY_HAS_REPORT')) return [{ entity_id: 'e', entity_name: 'Co' }]
       return []
     }

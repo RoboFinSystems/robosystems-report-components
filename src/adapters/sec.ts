@@ -114,14 +114,38 @@ RETURN s.identifier AS sid, s.canonical_type AS canonical_type,
        collect(DISTINCT fs.identifier) AS factsets
 ORDER BY number`
 
-// The report's own label linkbase: every label its per-report extension taxonomy
-// defines, tagged with the element it labels (`element_uri`). One small (~1k-row)
-// query yields the report's exact label dictionary, keyed by the report-scoped
-// `element_uri` join key. See the sec-label-scoping design note.
+// The report's own label linkbase — every label its taxonomy defines, tagged
+// with the element it labels (`element_uri`) — fetched in two steps.
+//
+// Why two steps (load-bearing): LadybugDB's planner only PROBES the shared
+// `TAXONOMY_HAS_LABEL` table (~80M edges at SEC scale) when the taxonomy is bound
+// by its primary key as a plan-time constant. Reaching the taxonomy through the
+// report traversal (`(r)-[:REPORT_USES_TAXONOMY]->(:Taxonomy)-[:TAXONOMY_HAS_LABEL]->…`)
+// — or carrying it forward via `WITH`/`UNWIND` — makes the planner scan the whole
+// edge table instead: a tiny result that nonetheless times out (~25 s+) and fails
+// the entire shell load. So resolve the taxonomy id(s) first (report-anchored,
+// fast), then pull labels per taxonomy with the id bound as a parameter (a PK
+// probe of that one taxonomy's ~few-thousand labels, fast).
+
+// Step 1: the report's taxonomy id(s). PK-anchored on the report.
+const LABELS_TAXONOMY_Q = `
+MATCH (r:Report {identifier: $rid})-[:REPORT_USES_TAXONOMY]->(t:Taxonomy)
+RETURN t.identifier AS tid`
+
+// Step 2: one taxonomy's labels, keyed by the report-scoped `element_uri` join
+// key. Bound by the taxonomy PK ($tid) so the planner probes from that one
+// taxonomy. `element_uri IS NOT NULL` is safe once anchored; nulls are also
+// dropped client-side in buildReportLabels.
 const LABELS_Q = `
-MATCH (r:Report {identifier: $rid})-[:REPORT_USES_TAXONOMY]->(:Taxonomy)-[tl:TAXONOMY_HAS_LABEL]->(l:Label)
+MATCH (t:Taxonomy {identifier: $tid})-[tl:TAXONOMY_HAS_LABEL]->(l:Label)
 WHERE tl.element_uri IS NOT NULL
 RETURN tl.element_uri AS element_uri, l.type AS role, l.value AS value`
+
+// Kill switch for the report-scoped label linkbase. When off, the shell skips
+// the label fetch and feeds an empty label set, so every `labelFor(...)` returns
+// null and display falls back to the humanized qname/element name — the
+// pre-label behavior. Typed `boolean` so neither branch is narrowed to dead code.
+const LABELS_ENABLED: boolean = true
 
 // Facts for one factset. Anchored on the factset PK; dimensional and consolidated
 // facts alike come through — the pivot engine keys cells by the full aspect
@@ -318,6 +342,23 @@ function mapEntity(row: Record<string, unknown> | undefined): EntityInfo | null 
   }
 }
 
+/**
+ * Fetch a report's label linkbase as `element_uri → role → value` rows, in two
+ * taxonomy-anchored steps (see LABELS_TAXONOMY_Q / LABELS_Q for why the split is
+ * load-bearing): resolve the taxonomy id(s), then pull each taxonomy's labels
+ * with the id bound by PK. Taxonomies are pulled in parallel and flattened.
+ */
+async function fetchReportLabelRows(
+  query: SecQuery,
+  reportId: string
+): Promise<Array<Record<string, unknown>>> {
+  const taxRows = await query(LABELS_TAXONOMY_Q, { rid: reportId })
+  const tids = taxRows.map((row) => str(row, 'tid')).filter((tid): tid is string => tid !== null)
+  if (tids.length === 0) return []
+  const perTaxonomy = await Promise.all(tids.map((tid) => query(LABELS_Q, { tid })))
+  return perTaxonomy.flat()
+}
+
 /** Fetch the entity + ordered section list for a report (the fast first read). */
 export async function fetchSecReportShell(
   query: SecQuery,
@@ -326,12 +367,16 @@ export async function fetchSecReportShell(
   const [entityRows, sectionRows, labelRows] = await Promise.all([
     query(ENTITY_META_Q, { rid: reportId }),
     query(SECTIONS_Q, { rid: reportId }),
-    // Report-scoped labels are an enhancement, not a requirement. A graph that
-    // predates the `TAXONOMY_HAS_LABEL.element_uri` ingest change binder-errors on
-    // LABELS_Q; swallow that so the shell still loads and labels fall back to the
-    // humanized qname. This lets the viewer ship ahead of the SEC reprocess and
-    // light up automatically once the graph carries element_uri.
-    query(LABELS_Q, { rid: reportId }).catch(() => []),
+    // Report-scoped labels are an enhancement, not a requirement, and are gated
+    // by LABELS_ENABLED. When off, feed an empty label set so labels fall back to
+    // the humanized qname. When on, fetch them via the two-step taxonomy-anchored
+    // path so the planner probes TAXONOMY_HAS_LABEL rather than scanning it. Kept
+    // non-fatal: a graph that predates the `TAXONOMY_HAS_LABEL.element_uri` ingest
+    // binder-errors on LABELS_Q; swallow that so the shell still loads and labels
+    // fall back to the humanized qname.
+    LABELS_ENABLED
+      ? fetchReportLabelRows(query, reportId).catch(() => [])
+      : Promise.resolve<Array<Record<string, unknown>>>([]),
   ])
 
   const sections: SecSection[] = sectionRows
