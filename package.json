@@ -33,6 +33,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:all": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
+    "prepare": "git config core.hooksPath .githooks || true",
     "prepublishOnly": "npm run build",
     "feature:create": "./bin/create-feature.sh",
     "release:create": "./bin/create-release.sh"
