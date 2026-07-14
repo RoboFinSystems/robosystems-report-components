@@ -444,6 +444,84 @@ describe('buildPivot — incomplete period columns are dropped', () => {
   })
 })
 
+describe('buildPivot — hides XBRL hypercube scaffolding rows', () => {
+  // A [Table] and its [Line Items] container sit between the section header and
+  // the real concepts. They carry no facts and (once their role tag is stripped)
+  // read as bare, duplicated "Statement" — pure plumbing, not headings. Elements
+  // are keyed by qname here, mirroring the SEC route (the store route keys by
+  // IRI); the scaffold check keys off the local name so both behave identically.
+  const SEC_ABS = 'us-gaap:IncomeStatementAbstract'
+  const TABLE = 'us-gaap:StatementTable'
+  const LINEITEMS = 'us-gaap:StatementLineItems'
+  const REV = 'us-gaap:Revenues'
+
+  function scaffoldReport(): NormalizedReport {
+    fid = 0
+    return {
+      reportId: 'r',
+      reportIri: null,
+      entity: null,
+      informationBlocks: [
+        { id: 's', blockType: 'income_statement', factSet: 'fs', label: null, structureId: 's' },
+      ],
+      structures: [
+        {
+          id: 's',
+          blockType: 'income_statement',
+          roleUri: null,
+          structureName: 'Income',
+          order: 0,
+        },
+      ],
+      facts: [fact(REV, 'p', 383285000000)],
+      elements: {
+        [SEC_ABS]: el(SEC_ABS, { abstract: true }),
+        [TABLE]: el(TABLE, { abstract: true }),
+        [LINEITEMS]: el(LINEITEMS, { abstract: true }),
+        [REV]: el(REV, { monetary: true, periodType: 'duration', numericKind: 'monetary' }),
+      },
+      periods: {
+        p: {
+          id: 'p',
+          type: 'duration',
+          instant: null,
+          startDate: '2022-09-25',
+          endDate: '2023-09-30',
+          end: '2023-09-30',
+        },
+      },
+      units: { 'u:usd': { id: 'u:usd', measure: 'iso4217:USD', label: 'USD', symbol: '$' } },
+      calcAssociations: [],
+      presAssociations: [
+        { parent: SEC_ABS, child: TABLE, order: 0, role: null, structure: 's' },
+        { parent: TABLE, child: LINEITEMS, order: 0, role: null, structure: 's' },
+        { parent: LINEITEMS, child: REV, order: 0, role: null, structure: 's' },
+      ],
+    }
+  }
+
+  const p = buildPivot(scaffoldReport(), scaffoldReport().informationBlocks[0])
+
+  it('emits no header row for the [Table]/[Line Items] plumbing', () => {
+    const scaffold = p.rows.filter(
+      (r) => r.header && /(?:Table|LineItems)$/.test(r.element.qname.split(':').pop() ?? '')
+    )
+    expect(scaffold).toHaveLength(0)
+  })
+
+  it('keeps the real section header and the concepts below it', () => {
+    expect(rowByKey(p, SEC_ABS)?.header).toBe(true)
+    expect(rowByKey(p, REV)?.cells?.[0]?.value).toBe(383285000000)
+  })
+
+  it('promotes the concepts to the scaffold’s depth instead of over-indenting', () => {
+    // Section header at 0; the two scaffold levels are skipped, so Revenues lands
+    // at depth 1 — not depth 3 (header + [Table] + [Line Items]).
+    expect(rowByKey(p, SEC_ABS)?.depth).toBe(0)
+    expect(rowByKey(p, REV)?.depth).toBe(1)
+  })
+})
+
 describe('buildPivot — a member-only concept gets a heading row (dims as rows)', () => {
   // A detail disclosure: a concept reported only per-member, with no consolidated
   // total. Its member rows must not be orphaned "member-only" labels — a valueless
