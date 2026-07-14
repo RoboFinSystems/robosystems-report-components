@@ -231,6 +231,20 @@ function fallbackElement(id: string): ElementInfo {
 const elementOf = (model: NormalizedReport, id: string): ElementInfo =>
   model.elements[id] ?? fallbackElement(id)
 
+/**
+ * Pure XBRL hypercube plumbing: a `[Table]` (the hypercube itself) and its
+ * `[Line Items]` container. These abstracts exist only to hang dimensional facts
+ * off of — they carry no data, and once their role tag is stripped for display
+ * they collapse to a bare, duplicated "Statement" heading. So they are never a
+ * meaningful row: skip the header and promote their children in their place.
+ * Keyed off the concept's local name (identical across the store and SEC routes,
+ * which key elements by IRI vs qname respectively) so both render the same.
+ */
+const SCAFFOLD_LOCAL_RE = /(?:Table|LineItems)$/
+function isStructuralScaffold(el: ElementInfo): boolean {
+  return el.abstract && SCAFFOLD_LOCAL_RE.test(localName(el.qname))
+}
+
 // ── Default configuration ───────────────────────────────────────────────────
 
 /**
@@ -711,7 +725,10 @@ export function buildPivot(
     seenInTree.add(id)
     const el = elementOf(model, id)
     if (el.abstract) {
-      if (config.showAbstracts) {
+      // Hypercube scaffolding ([Table]/[Line Items]) is not a heading — hide its
+      // row and keep its children at the current depth so the tree stays flat.
+      const scaffold = isStructuralScaffold(el)
+      if (config.showAbstracts && !scaffold) {
         rows.push({
           key: id,
           element: el,
@@ -722,7 +739,8 @@ export function buildPivot(
           cells: [],
         })
       }
-      for (const child of tree.childrenOf.get(id) ?? []) walk(child, depth + 1)
+      const childDepth = scaffold ? depth : depth + 1
+      for (const child of tree.childrenOf.get(id) ?? []) walk(child, childDepth)
     } else {
       for (const child of tree.childrenOf.get(id) ?? []) walk(child, depth + 1)
       emitConcept(id, depth)
