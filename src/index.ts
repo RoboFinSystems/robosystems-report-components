@@ -11,7 +11,15 @@
  */
 
 // Model + reconstruction + formatting
-export { BLOCK_ORDER, BLOCK_TITLES, NS, humanize, isExternalFactUrl, qname } from './constants'
+export {
+  BLOCK_ORDER,
+  BLOCK_TITLES,
+  NS,
+  humanize,
+  isExternalFactUrl,
+  qname,
+  stripRoleSuffix,
+} from './constants'
 export * from './format'
 export * from './model'
 export {

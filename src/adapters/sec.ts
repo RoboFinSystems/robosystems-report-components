@@ -31,7 +31,7 @@
  *  5. Aggregations must `ORDER BY <alias>` (not `s.number`); `end` is reserved, so
  *     alias every `p.end_date AS end_date`.
  */
-import { humanize, qname as toQname } from '../constants'
+import { humanize, stripRoleSuffix, qname as toQname } from '../constants'
 import { currencySymbolFor } from '../format'
 import type {
   CalcAssociation,
@@ -253,19 +253,6 @@ function dimLabel(local: string | null): string {
 const STANDARD_LABEL_ROLE = 'http://www.xbrl.org/2003/role/label'
 /** Terse label role — the fallback when a concept has no standard label. */
 const TERSE_LABEL_ROLE = 'http://www.xbrl.org/2003/role/terseLabel'
-
-/**
- * XBRL standard labels tag structural elements with a bracketed role suffix —
- * `Land [Member]`, `Operating Expenses [Abstract]`, and likewise `[Axis]`,
- * `[Table]`, `[Line Items]`, `[Domain]`. That tag is metadata, not part of the
- * display name, so strip a trailing one. If stripping would empty the label
- * (a label that is only the tag), keep the original.
- */
-const ROLE_SUFFIX_RE = /\s*\[(?:Abstract|Axis|Member|Table|Line Items|Domain)\]\s*$/
-function stripRoleSuffix(label: string): string {
-  const stripped = label.replace(ROLE_SUFFIX_RE, '').trim()
-  return stripped || label
-}
 
 /** Build the report's element-URI → (role → value) label dictionary from LABELS_Q rows. */
 function buildReportLabels(rows: Array<Record<string, unknown>>): ReportLabels {

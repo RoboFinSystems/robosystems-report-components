@@ -114,6 +114,21 @@ export function humanize(iri: string): string {
 }
 
 /**
+ * XBRL standard labels tag structural elements with a bracketed role suffix —
+ * `Land [Member]`, `Operating Expenses [Abstract]`, and likewise `[Axis]`,
+ * `[Table]`, `[Line Items]`, `[Domain]`, `[Roll Forward]`, `[Text Block]`. That
+ * tag is metadata, not part of the display name, so strip a trailing one. If
+ * stripping would empty the label (a label that is only the tag), keep the
+ * original.
+ */
+const ROLE_SUFFIX_RE =
+  /\s*\[(?:Abstract|Axis|Member|Table|Line Items|Domain|Roll Forward|Roll Up|Text Block|Policy Text Block|Table Text Block|Extensible List|Extensible Enumeration|Flag)\]\s*$/i
+export function stripRoleSuffix(label: string): string {
+  const stripped = label.replace(ROLE_SUFFIX_RE, '').trim()
+  return stripped || label
+}
+
+/**
  * A large text-block / policy fact whose HTML (or plain-text) body is too big to
  * store inline, so the platform externalizes it to the public CDN and the fact's
  * value is the URL (`…/fact_<hash>.html` or `.txt`). The renderer fetches and
