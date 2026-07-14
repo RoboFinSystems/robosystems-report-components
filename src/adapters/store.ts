@@ -9,7 +9,7 @@
  * traversal. The only per-source code is how the store gets filled.
  */
 import { DataFactory, Store } from 'n3'
-import { IRI, humanize, qname } from '../constants'
+import { IRI, humanize, qname, stripRoleSuffix } from '../constants'
 import type {
   CalcAssociation,
   DimensionQualifier,
@@ -82,10 +82,14 @@ export function parseStore(store: Store): NormalizedReport {
     const balance = firstValue(id, IRI.balance)
     const periodType = firstValue(id, IRI.periodType)
     const itemType = firstValue(id, IRI.itemType) ?? undefined
+    // A holon's prefLabel is the filing's XBRL standard label, which tags
+    // structural concepts with their role (`Common Stock [Member]`,
+    // `Statement [Table]`) — strip the tag for display, as the SEC adapter does.
+    const prefLabel = firstValue(id, IRI.prefLabel)
     elements[id] = {
       id,
       qname: qname(id),
-      label: firstValue(id, IRI.prefLabel) ?? humanize(id),
+      label: prefLabel ? stripRoleSuffix(prefLabel) : humanize(id),
       balance: balance === 'debit' || balance === 'credit' ? balance : null,
       periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
       abstract: firstValue(id, IRI.abstract) === 'true',
@@ -182,6 +186,7 @@ export function parseStore(store: Store): NormalizedReport {
   // ── Information Blocks ──
   const informationBlocks: InformationBlock[] = []
   for (const id of subjectsOfType(IRI.InformationBlock)) {
+    const blockLabel = firstValue(id, IRI.prefLabel)
     informationBlocks.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
@@ -190,7 +195,7 @@ export function parseStore(store: Store): NormalizedReport {
       // block-type classification, so structureId is how row order is found.
       structureId: firstValue(id, IRI.structure) ?? undefined,
       factSet: firstValue(id, IRI.factSet),
-      label: firstValue(id, IRI.prefLabel),
+      label: blockLabel ? stripRoleSuffix(blockLabel) : null,
     })
   }
 

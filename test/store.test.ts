@@ -129,4 +129,79 @@ describe('holon store adapter', () => {
     expect(fact?.factSets).toEqual(expect.arrayContaining(['http://ex/fsNotes', 'http://ex/fsBS']))
     expect(fact?.factSets).toHaveLength(2)
   })
+
+  it('strips the XBRL role tag from element and dimension labels', async () => {
+    // A holon's prefLabel is the filing's standard label, which tags structural
+    // concepts with their role — `[Abstract]`, `[Table]`, `[Line Items]`,
+    // `[Roll Forward]`, `[Member]`. These are metadata, not display names.
+    const doc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/hdr',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: "Statement of Stockholders' Equity [Abstract]",
+        },
+        {
+          '@id': 'http://ex/tbl',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: 'Statement [Table]',
+        },
+        {
+          '@id': 'http://ex/li',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: 'Statement [Line Items]',
+        },
+        {
+          '@id': 'http://ex/rf',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: 'Increase (Decrease) in Stockholders’ Equity [Roll Forward]',
+        },
+        {
+          '@id': 'http://ex/fd',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/rf' },
+          [`${RS}period`]: { '@id': 'http://ex/p' },
+          [`${RS}numericValue`]: 60,
+          [`${RS}dimension`]: { '@id': 'http://ex/d1' },
+        },
+        {
+          '@id': 'http://ex/d1',
+          '@type': `${RS}Dimension`,
+          [`${RS}axis`]: { '@id': 'http://ex/axis' },
+          [`${RS}member`]: { '@id': 'http://ex/mem' },
+          [`${RS}isExplicit`]: true,
+        },
+        {
+          '@id': 'http://ex/axis',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: 'Equity Components [Axis]',
+        },
+        {
+          '@id': 'http://ex/mem',
+          '@type': `${RS}Element`,
+          [`${SKOS}prefLabel`]: 'Common Stock [Member]',
+        },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    expect(model.elements['http://ex/hdr']?.label).toBe("Statement of Stockholders' Equity")
+    expect(model.elements['http://ex/tbl']?.label).toBe('Statement')
+    expect(model.elements['http://ex/li']?.label).toBe('Statement')
+    expect(model.elements['http://ex/rf']?.label).toBe(
+      'Increase (Decrease) in Stockholders’ Equity'
+    )
+    const dim = model.facts.find((f) => f.id === 'http://ex/fd')?.dimensions?.[0]
+    expect(dim?.axisLabel).toBe('Equity Components')
+    expect(dim?.memberLabel).toBe('Common Stock')
+  })
+
+  it('keeps a label that is only a role tag rather than emptying it', async () => {
+    const doc = {
+      '@graph': [
+        { '@id': 'http://ex/bare', '@type': `${RS}Element`, [`${SKOS}prefLabel`]: '[Abstract]' },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    expect(model.elements['http://ex/bare']?.label).toBe('[Abstract]')
+  })
 })
