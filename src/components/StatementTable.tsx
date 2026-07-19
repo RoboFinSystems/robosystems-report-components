@@ -300,7 +300,10 @@ export function StatementTable({
                         <div style={styles.textBlockLabel} title={row.element.qname}>
                           {rowLabel(row)}
                         </div>
-                        <InlineTextBlock html={inline.textValue} />
+                        <InlineTextBlock
+                          html={inline.textValue}
+                          contentType={inline.fact?.contentType}
+                        />
                       </td>
                     </tr>
                   )

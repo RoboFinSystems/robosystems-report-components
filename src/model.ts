@@ -144,6 +144,13 @@ export interface Fact {
    */
   textValue?: string | null
   /**
+   * MIME type of `textValue` (rs:contentType) when the producer declares one.
+   * SEC-derived text blocks carry HTML and omit this; RoboLedger-authored
+   * narratives declare `text/markdown`, which the text-block renderer converts
+   * before display. Absent/null means treat the payload as HTML.
+   */
+  contentType?: string | null
+  /**
    * The fact's dimensional coordinate — one qualifier per axis, ordered by axis.
    * Absent/empty means a consolidated (undimensioned) fact. Part of the fact's
    * identity: the pivot engine keys cells by `(element, period, dimensions)`, so

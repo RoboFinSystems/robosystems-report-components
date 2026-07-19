@@ -60,6 +60,41 @@ describe('holon store adapter', () => {
     expect(model.elements['http://ex/el1']?.itemType).toBe('textBlock')
   })
 
+  it('reads Fact.contentType (markdown narratives declare text/markdown)', async () => {
+    const doc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/f1',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/el1' },
+          [`${RS}period`]: { '@id': 'http://ex/p1' },
+          [`${RS}stringValue`]: '# Inventory Policy\n\nFIFO, lower of cost or NRV.',
+          [`${RS}contentType`]: 'text/markdown',
+          [`${RS}factType`]: 'nonnumeric',
+        },
+      ],
+    }
+    const model = await parseJsonld(doc)
+    const fact = model.facts.find((f) => f.id === 'http://ex/f1')
+    expect(fact?.contentType).toBe('text/markdown')
+
+    // Undeclared content type stays null → treated as HTML downstream
+    // (the SEC pipeline's text blocks carry HTML and no rs:contentType).
+    const htmlDoc = {
+      '@graph': [
+        {
+          '@id': 'http://ex/f2',
+          '@type': `${RS}Fact`,
+          [`${RS}element`]: { '@id': 'http://ex/el1' },
+          [`${RS}period`]: { '@id': 'http://ex/p1' },
+          [`${RS}stringValue`]: '<div>HTML narrative.</div>',
+        },
+      ],
+    }
+    const htmlModel = await parseJsonld(htmlDoc)
+    expect(htmlModel.facts[0].contentType ?? null).toBeNull()
+  })
+
   it('reads Fact.dimensions from rs:dimension (with axis/member labels)', async () => {
     const doc = {
       '@graph': [
