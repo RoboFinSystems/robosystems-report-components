@@ -178,6 +178,7 @@ export function parseStore(store: Store): NormalizedReport {
       factSets: factSets.length ? factSets : undefined,
       value: toNumber(firstValue(id, IRI.numericValue)),
       textValue: firstValue(id, IRI.stringValue),
+      contentType: firstValue(id, IRI.contentType),
       decimals: firstValue(id, IRI.decimals),
       dimensions: dimensions.length ? dimensions : undefined,
     })

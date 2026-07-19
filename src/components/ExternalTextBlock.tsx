@@ -11,6 +11,7 @@
  * measurable so the frame auto-sizes to its content. Plain-text bodies render in
  * a `<pre>`.
  */
+import { marked } from 'marked'
 import type { CSSProperties } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
@@ -54,12 +55,29 @@ function wrapHtml(body: string): string {
 }
 
 /**
- * An *inline* text-block fact — the disclosure HTML lives in the holon itself
- * (`rs:stringValue`), not an external CDN URL — rendered in the same sandboxed
- * frame as the externalized case. Used for holon-authored / offline reports.
+ * An *inline* text-block fact — the disclosure payload lives in the holon
+ * itself (`rs:stringValue`), not an external CDN URL — rendered in the same
+ * sandboxed frame as the externalized case. Used for holon-authored / offline
+ * reports.
+ *
+ * `contentType` (rs:contentType) selects the payload interpretation:
+ * `text/markdown` (RoboLedger-authored narratives) is converted to HTML with
+ * marked before framing; anything else — including the SEC pipeline's
+ * undeclared HTML text blocks — passes through as HTML.
  */
-export function InlineTextBlock({ html }: { html: string }) {
-  return <SandboxedHtml html={html} />
+export function InlineTextBlock({
+  html,
+  contentType,
+}: {
+  html: string
+  contentType?: string | null
+}) {
+  const body = isMarkdown(contentType) ? (marked.parse(html, { async: false }) as string) : html
+  return <SandboxedHtml html={body} />
+}
+
+function isMarkdown(contentType?: string | null): boolean {
+  return (contentType ?? '').split(';')[0].trim().toLowerCase() === 'text/markdown'
 }
 
 function SandboxedHtml({ html }: { html: string }) {

@@ -25,3 +25,28 @@ describe('ReportView — renders into the DOM', () => {
     expect(screen.getByText('$(150.00)')).toBeTruthy()
   })
 })
+
+describe('InlineTextBlock — markdown conversion', () => {
+  it('converts text/markdown payloads to HTML before framing', async () => {
+    const { InlineTextBlock } = await import('../src/components/ExternalTextBlock')
+    const { container } = render(
+      <InlineTextBlock
+        html={'# Inventory Policy\n\nFIFO, **lower of cost** or NRV.'}
+        contentType="text/markdown"
+      />
+    )
+    const frame = container.querySelector('iframe')
+    expect(frame).toBeTruthy()
+    const srcdoc = frame?.getAttribute('srcdoc') ?? ''
+    expect(srcdoc).toContain('<h1>Inventory Policy</h1>')
+    expect(srcdoc).toContain('<strong>lower of cost</strong>')
+    expect(srcdoc).not.toContain('# Inventory Policy')
+  })
+
+  it('passes HTML payloads through untouched when contentType is absent', async () => {
+    const { InlineTextBlock } = await import('../src/components/ExternalTextBlock')
+    const { container } = render(<InlineTextBlock html={'<div>Already <em>HTML</em>.</div>'} />)
+    const srcdoc = container.querySelector('iframe')?.getAttribute('srcdoc') ?? ''
+    expect(srcdoc).toContain('<div>Already <em>HTML</em>.</div>')
+  })
+})

@@ -38,6 +38,7 @@ export const IRI = {
   factSet: NS.rs + 'factSet',
   numericValue: NS.rs + 'numericValue',
   stringValue: NS.rs + 'stringValue',
+  contentType: NS.rs + 'contentType',
   decimals: NS.rs + 'decimals',
   dimension: NS.rs + 'dimension',
   axis: NS.rs + 'axis',
