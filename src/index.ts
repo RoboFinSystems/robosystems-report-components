@@ -11,6 +11,7 @@
  */
 
 // Model + reconstruction + formatting
+export * from './chart'
 export {
   BLOCK_ORDER,
   BLOCK_TITLES,
@@ -41,6 +42,8 @@ export { ReportView } from './components/ReportView'
 export type { ReportViewProps } from './components/ReportView'
 export { StatementTable } from './components/StatementTable'
 export type { StatementTableProps } from './components/StatementTable'
+export { TimeSeriesChart } from './components/TimeSeriesChart'
+export type { TimeSeriesChartProps } from './components/TimeSeriesChart'
 
 // Adapters (also available at the `/adapters` subpath)
 export { cypherAdapter } from './adapters/cypher'
