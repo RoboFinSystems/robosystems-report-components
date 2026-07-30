@@ -74,6 +74,20 @@ function memberKey(d: DimensionQualifier | null | undefined): string {
 }
 
 /**
+ * The ISO date one day before `date`. XBRL dates a beginning-of-period instant
+ * as the prior period's end (FY2026 runs 2025-01-27 → 2026-01-25; its opening
+ * balance is the instant 2025-01-26), so a `periodStart*` row binds the instant
+ * at the duration's start date minus one day (with the exact start date as a
+ * fallback for non-SEC conventions).
+ */
+function isoDayBefore(date: string): string {
+  const t = new Date(`${date}T00:00:00Z`)
+  if (Number.isNaN(t.getTime())) return date
+  t.setUTCDate(t.getUTCDate() - 1)
+  return t.toISOString().slice(0, 10)
+}
+
+/**
  * A fact's coordinate along a chosen set of axes, as a stable signature. A fact
  * with no member on an axis contributes the domain-total marker, so the
  * consolidated total gets its own coordinate distinct from every member.
@@ -152,17 +166,45 @@ function dimensionInScope(scope: PresentationScope, d: DimensionQualifier): bool
 
 // ── Presentation tree ───────────────────────────────────────────────────────
 
+/**
+ * One presentation arc as the row walk consumes it: the child plus the arc's
+ * preferred-label choice. `binding` is the roll-forward semantic — a
+ * `periodStart*` / `periodEnd*` role means this arc's row binds the instant
+ * fact at the START (respectively end) of each duration column, so the same
+ * concept legitimately appears twice (beginning and ending balance).
+ */
+interface PresArcRef {
+  child: string
+  label: string | null
+  binding: 'start' | 'end' | null
+  negated: boolean
+}
+
 interface PresentationTree {
-  /** Ordered children per parent (by arc order). */
-  childrenOf: Map<string, string[]>
+  /** Ordered child arcs per parent (by arc order). */
+  childrenOf: Map<string, PresArcRef[]>
   /** Presentation roots (a `from` that is never a `to`), in filing sequence. */
   roots: string[]
   /** Pre-order position of each element — the member/row ordering key. */
   indexOf: Map<string, number>
 }
 
+function arcRef(a: {
+  child: string
+  preferredLabel?: string | null
+  preferredLabelRole?: string | null
+}): PresArcRef {
+  const role = a.preferredLabelRole ?? ''
+  return {
+    child: a.child,
+    label: a.preferredLabel ?? null,
+    binding: /periodStart/i.test(role) ? 'start' : /periodEnd/i.test(role) ? 'end' : null,
+    negated: /negated/i.test(role),
+  }
+}
+
 /**
- * Index one structure's presentation arcs: ordered children per parent, the
+ * Index one structure's presentation arcs: ordered child arcs per parent, the
  * roots, and each element's pre-order position (used to order dimension members).
  * The row walk itself (in `buildPivot`) is a hybrid — abstract headers emit
  * before their children, concrete concepts after — so a subtotal renders after
@@ -170,22 +212,22 @@ interface PresentationTree {
  * (us-gaap) or as the presentation parent of its components (rs-gaap).
  */
 function presentationTree(model: NormalizedReport, structureId: string): PresentationTree {
-  const children = new Map<string, Array<[number, string]>>()
+  const children = new Map<string, Array<[number, PresArcRef]>>()
   const froms = new Set<string>()
   const tos = new Set<string>()
   for (const assoc of model.presAssociations) {
     if (assoc.structure !== structureId) continue
     const kids = children.get(assoc.parent) ?? []
-    kids.push([assoc.order, assoc.child])
+    kids.push([assoc.order, arcRef(assoc)])
     children.set(assoc.parent, kids)
     froms.add(assoc.parent)
     tos.add(assoc.child)
   }
-  const childrenOf = new Map<string, string[]>()
+  const childrenOf = new Map<string, PresArcRef[]>()
   for (const [parent, kids] of children) {
     childrenOf.set(
       parent,
-      kids.sort((a, b) => a[0] - b[0]).map(([, child]) => child)
+      kids.sort((a, b) => a[0] - b[0]).map(([, arc]) => arc)
     )
   }
   const rootKey = (root: string): number => {
@@ -204,7 +246,7 @@ function presentationTree(model: NormalizedReport, structureId: string): Present
     seen.add(node)
     const ln = localName(node)
     if (!indexOf.has(ln)) indexOf.set(ln, indexOf.size)
-    for (const child of childrenOf.get(node) ?? []) pre(child)
+    for (const arc of childrenOf.get(node) ?? []) pre(arc.child)
   }
   for (const root of roots) pre(root)
   return { childrenOf, roots, indexOf }
@@ -561,24 +603,6 @@ export function buildPivot(
     ? presentationTree(model, structure.id)
     : { childrenOf: new Map(), roots: [], indexOf: new Map() }
 
-  // The filer's per-arc label choice from the presentation network: the label
-  // string that names the row and — for `negated*` roles — a display-sign flip
-  // (`Less short-term portion (999)` for a fact tagged +999). First arc to a
-  // child wins within a structure.
-  const preferredByChild = new Map<string, { label: string | null; negated: boolean }>()
-  if (structure) {
-    for (const a of model.presAssociations) {
-      if (a.structure !== structure.id) continue
-      if (!a.preferredLabel && !a.preferredLabelRole) continue
-      if (!preferredByChild.has(a.child)) {
-        preferredByChild.set(a.child, {
-          label: a.preferredLabel ?? null,
-          negated: (a.preferredLabelRole ?? '').includes('negated'),
-        })
-      }
-    }
-  }
-
   const rowDimAxes = dimAxes(config.rows)
   const colDimAxes = dimAxes(config.columns)
   const allowedAxes = new Set([...rowDimAxes, ...colDimAxes, ...dimAxes(config.slicers)])
@@ -623,6 +647,20 @@ export function buildPivot(
   let periods = periodOnColumns ? derivePeriods(model, tableFacts) : []
   if (periodOnColumns && config.dropSparsePeriods !== false) {
     periods = pruneSparsePeriods(model, tableFacts, periods)
+  }
+  // A roll-forward's opening instants render as beginning-balance rows *inside*
+  // the duration columns (periodStart binding below); a standalone column for
+  // the same instant would duplicate that data, so drop it.
+  const hasRollForward = [...tree.childrenOf.values()].some((arcs) =>
+    arcs.some((a) => a.binding !== null)
+  )
+  if (periodOnColumns && hasRollForward) {
+    const startKeys = new Set(
+      periods
+        .filter((p) => p.type === 'duration' && p.startDate)
+        .flatMap((p) => [isoDayBefore(p.startDate as string), p.startDate as string])
+    )
+    periods = periods.filter((p) => !(p.type === 'instant' && startKeys.has(p.end)))
   }
   const colCombos = memberCombos(tableFacts, colDimAxes, tree.indexOf, true)
 
@@ -676,28 +714,52 @@ export function buildPivot(
   }
 
   const factfulConcepts = new Set(tableFacts.map((f) => f.element))
+
+  // The period end-date(s) a row binds against in a column. Default (and
+  // `periodEnd`) rows read the column's own end; a `periodStart` row reads the
+  // instant at the column duration's start — dated the day before the start
+  // (the XBRL/SEC convention), with the exact start date as fallback.
+  const periodKeysFor = (col: PivotColumn, binding: 'start' | 'end' | null): string[] => {
+    if (binding !== 'start') return [col.period?.end ?? '']
+    const start = col.period?.startDate
+    return start ? [isoDayBefore(start), start] : []
+  }
+
+  const lookupFact = (
+    element: string,
+    rowSig: string,
+    col: PivotColumn,
+    binding: 'start' | 'end' | null
+  ): Fact | undefined => {
+    const colSig = coordinate(new Map(col.members.map((m) => [m.axis, m])), colDimAxes)
+    for (const end of periodKeysFor(col, binding)) {
+      const fact = factIndex.get(`${element}␟${rowSig}␟${end}␟${colSig}`)
+      if (fact) return fact
+    }
+    return undefined
+  }
+
   // Domain total last on rows too: member rows list first, then the concept's
   // own (memberless) total below and outdented — the accounting "components then
   // total" layout, so the total reads as the sum of the members above it.
   const rowCombos = memberCombos(tableFacts, rowDimAxes, tree.indexOf, true)
-  const combosForConcept = (element: string): MemberCombo[] => {
-    if (rowDimAxes.length === 0) return rowCombos // single domain combo
-    return rowCombos.filter((combo) =>
-      columns.some((col) =>
-        factIndex.has(
-          `${element}␟${combo.sig}␟${col.period?.end ?? ''}␟${coordinate(
-            new Map(col.members.map((m) => [m.axis, m])),
-            colDimAxes
-          )}`
-        )
-      )
-    )
+  const combosForConcept = (element: string, binding: 'start' | 'end' | null): MemberCombo[] => {
+    const occupied = (combo: MemberCombo): boolean =>
+      columns.some((col) => lookupFact(element, combo.sig, col, binding) !== undefined)
+    if (rowDimAxes.length === 0) {
+      // A start/end row with no bindable fact anywhere must not render at all.
+      return binding === null || occupied(rowCombos[0]) ? rowCombos : []
+    }
+    return rowCombos.filter(occupied)
   }
 
-  const cellsFor = (element: string, rowSig: string): PivotRow['cells'] =>
+  const cellsFor = (
+    element: string,
+    rowSig: string,
+    binding: 'start' | 'end' | null
+  ): PivotRow['cells'] =>
     columns.map((col) => {
-      const colSig = coordinate(new Map(col.members.map((m) => [m.axis, m])), colDimAxes)
-      const fact = factIndex.get(`${element}␟${rowSig}␟${col.period?.end ?? ''}␟${colSig}`)
+      const fact = lookupFact(element, rowSig, col, binding)
       return {
         value: fact?.value ?? null,
         fact: fact ?? null,
@@ -715,21 +777,24 @@ export function buildPivot(
     if (cached !== undefined) return cached
     hasFactMemo.set(id, false) // guard against cycles
     let has = factfulConcepts.has(id)
-    for (const child of tree.childrenOf.get(id) ?? []) {
-      if (subtreeHasFact(child)) has = true
+    for (const arc of tree.childrenOf.get(id) ?? []) {
+      if (subtreeHasFact(arc.child)) has = true
     }
     hasFactMemo.set(id, has)
     return has
   }
 
   const rows: PivotRow[] = []
-  const emitConcept = (id: string, depth: number): void => {
+  const emitConcept = (id: string, depth: number, arc: PresArcRef | null): void => {
     const el = elementOf(model, id)
-    const combos = combosForConcept(id)
+    const binding = arc?.binding ?? null
+    const combos = combosForConcept(id, binding)
     if (!combos.length) return
-    const pref = preferredByChild.get(id)
-    const rowLabel = pref?.label ?? undefined
-    const negated = pref?.negated || undefined
+    const rowLabel = arc?.label ?? undefined
+    const negated = arc?.negated || undefined
+    // A roll-forward concept renders once per arc (beginning / ending balance);
+    // the binding suffix keeps those rows' keys distinct.
+    const variant = binding ? `${id}␟rf:${binding}` : id
     // With dimensions on rows, a concept's own total row heads its indented member
     // breakdown and supplies the concept name. When the concept has *no*
     // consolidated total (only per-member facts — common in detail disclosures),
@@ -737,7 +802,7 @@ export function buildPivot(
     // labels (`CREM Loan · Mortgages` with no idea what is being measured).
     if (combos.every((c) => c.members.length > 0)) {
       rows.push({
-        key: id,
+        key: variant,
         element: el,
         depth,
         header: false,
@@ -753,13 +818,13 @@ export function buildPivot(
       // concept's own total row, identical to the undimensioned case. Only member
       // sub-rows carry the dimensional signature in their key.
       rows.push({
-        key: combo.members.length ? `${id}␟${combo.sig}` : id,
+        key: combo.members.length ? `${variant}␟${combo.sig}` : variant,
         element: el,
         depth: depth + (combo.members.length ? 1 : 0),
         header: false,
         isSubtotal: subtotals.has(id),
         members: combo.members,
-        cells: cellsFor(id, combo.sig),
+        cells: cellsFor(id, combo.sig, binding),
         label: rowLabel,
         negated,
       })
@@ -770,11 +835,21 @@ export function buildPivot(
   // `[Roll Up]` header sits above its section); a concrete concept emits *after*
   // its children (so a subtotal lands below its components) — correct whether the
   // subtotal is an abstract's last child (us-gaap) or the parent itself (rs-gaap).
+  //
+  // Dedup is per (element, binding): a roll-forward concept appears under TWO
+  // arcs — beginning balance at the top of the network, ending balance at the
+  // bottom — and each emits its own row; every other repeat of an element is a
+  // genuine duplicate and drops.
   const seenInTree = new Set<string>()
-  const walk = (id: string, depth: number): void => {
-    if (seenInTree.has(id) || !subtreeHasFact(id)) return
-    seenInTree.add(id)
+  const walkedConcepts = new Set<string>()
+  const walk = (arc: PresArcRef, depth: number): void => {
+    const id = arc.child
+    if (!subtreeHasFact(id)) return
     const el = elementOf(model, id)
+    const dedupKey = el.abstract ? id : `${id}␟${arc.binding ?? ''}`
+    if (seenInTree.has(dedupKey)) return
+    seenInTree.add(dedupKey)
+    walkedConcepts.add(id)
     if (el.abstract) {
       // Hypercube scaffolding ([Table]/[Line Items]) is not a heading — hide its
       // row and keep its children at the current depth so the tree stays flat.
@@ -788,21 +863,23 @@ export function buildPivot(
           isSubtotal: false,
           members: [],
           cells: [],
-          label: preferredByChild.get(id)?.label ?? undefined,
+          label: arc.label ?? undefined,
         })
       }
       const childDepth = scaffold ? depth : depth + 1
       for (const child of tree.childrenOf.get(id) ?? []) walk(child, childDepth)
     } else {
       for (const child of tree.childrenOf.get(id) ?? []) walk(child, depth + 1)
-      emitConcept(id, depth)
+      emitConcept(id, depth, arc)
     }
   }
-  for (const root of tree.roots) walk(root, 0)
+  for (const root of tree.roots) {
+    walk({ child: root, label: null, binding: null, negated: false }, 0)
+  }
   // Concepts with facts but absent from the presentation network — append after.
   for (const id of factfulConcepts) {
-    if (seenInTree.has(id) || elementOf(model, id).abstract) continue
-    emitConcept(id, 0)
+    if (walkedConcepts.has(id) || elementOf(model, id).abstract) continue
+    emitConcept(id, 0, null)
   }
 
   const title = ib.structureId
