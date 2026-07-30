@@ -47,6 +47,8 @@ export const IRI = {
   typedValue: NS.rs + 'typedValue',
   blockType: NS.rs + 'blockType',
   associationType: NS.rs + 'associationType',
+  preferredLabel: NS.rs + 'preferredLabel',
+  preferredLabelRole: NS.rs + 'preferredLabelRole',
   hasAssociation: NS.rs + 'hasAssociation',
   roleUri: NS.rs + 'roleUri',
   structure: NS.rs + 'structure',

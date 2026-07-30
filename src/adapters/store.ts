@@ -245,7 +245,15 @@ export function parseStore(store: Store): NormalizedReport {
         structure,
       })
     } else if (type === 'presentation') {
-      presAssociations.push({ parent, child, order, role, structure })
+      presAssociations.push({
+        parent,
+        child,
+        order,
+        role,
+        structure,
+        preferredLabel: firstValue(id, IRI.preferredLabel),
+        preferredLabelRole: firstValue(id, IRI.preferredLabelRole),
+      })
     }
   }
 

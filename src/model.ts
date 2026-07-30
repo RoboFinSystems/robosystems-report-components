@@ -176,6 +176,10 @@ export interface PresAssociation {
   order: number
   role: string | null
   structure: string | null
+  /** The filer's label choice for this arc (resolved string), when declared. */
+  preferredLabel?: string | null
+  /** The preferred-label role URI — `negated*` roles flip the displayed sign. */
+  preferredLabelRole?: string | null
 }
 
 /** A network root — groups associations under one role / block type. */
@@ -361,6 +365,14 @@ export interface PivotRow {
   members: DimensionQualifier[]
   /** One cell per leaf column, aligned by index (empty for header rows). */
   cells: PivotCell[]
+  /** The filer's preferred label for this row's presentation arc, when declared. */
+  label?: string
+  /**
+   * The arc's preferred-label role is a `negated*` variant: display each cell
+   * value sign-flipped (accounting parentheses). Fact values stay untouched —
+   * this is presentation, so inspection and analysis read the raw fact.
+   */
+  negated?: boolean
 }
 
 /** Resolved display scale + a caption for the section header. */
