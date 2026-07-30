@@ -195,6 +195,7 @@ MATCH (s:Structure {identifier: $sid})-[:STRUCTURE_HAS_ASSOCIATION]->(a:Associat
       (a)-[:ASSOCIATION_HAS_FROM_ELEMENT]->(pe:Element),
       (a)-[:ASSOCIATION_HAS_TO_ELEMENT]->(ce:Element)
 RETURN a.association_type AS association_type, a.order_value AS order_value, a.weight AS weight,
+       a.preferred_label AS preferred_label,
        pe.qname AS parent, pe.uri AS parent_uri, pe.name AS parent_name, pe.is_abstract AS parent_abstract,
        ce.qname AS child, ce.uri AS child_uri, ce.name AS child_name, ce.is_abstract AS child_abstract`
 
@@ -598,7 +599,22 @@ export async function fetchSecSection(
         structure: section.id,
       })
     } else if (type === 'presentation') {
-      presAssociations.push({ parent, child, order, role: null, structure: section.id })
+      // The arc's preferred-label role (graph: Association.preferred_label) plus
+      // its resolved string from the report's own label linkbase — already
+      // fetched taxonomy-scoped in the shell, so no extra query. The pivot
+      // labels the row from the string and reads negated* off the role.
+      const preferredRole = str(row, 'preferred_label')
+      presAssociations.push({
+        parent,
+        child,
+        order,
+        role: null,
+        structure: section.id,
+        preferredLabel: preferredRole
+          ? labelFor(shell.labels, str(row, 'child_uri'), preferredRole)
+          : null,
+        preferredLabelRole: preferredRole,
+      })
     }
   }
 
