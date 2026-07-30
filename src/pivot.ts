@@ -68,15 +68,18 @@ function memberByAxis(fact: Fact): Map<string, DimensionQualifier> {
   return m
 }
 
+/** The signature key one qualifier contributes: member, typed value, or domain. */
+function memberKey(d: DimensionQualifier | null | undefined): string {
+  return d?.member ?? d?.typedValue ?? DOMAIN
+}
+
 /**
  * A fact's coordinate along a chosen set of axes, as a stable signature. A fact
  * with no member on an axis contributes the domain-total marker, so the
  * consolidated total gets its own coordinate distinct from every member.
  */
 function coordinate(byAxis: Map<string, DimensionQualifier>, axes: string[]): string {
-  return axes
-    .map((a) => `${a}=${byAxis.get(a)?.member ?? byAxis.get(a)?.typedValue ?? DOMAIN}`)
-    .join('|')
+  return axes.map((a) => `${a}=${memberKey(byAxis.get(a))}`).join('|')
 }
 
 /** Facts belonging to one section (its Information Block's factset). */
@@ -509,7 +512,11 @@ function resolveScale(facts: Fact[], model: NormalizedReport, requested: Scale):
 
 // ── Slicers ─────────────────────────────────────────────────────────────────
 
-function buildSlicers(model: NormalizedReport, facts: Fact[], config: PivotConfig): PivotSlicer[] {
+function buildSlicers(
+  model: NormalizedReport,
+  config: PivotConfig,
+  diced: Map<string, DimensionQualifier | null>
+): PivotSlicer[] {
   const slicers: PivotSlicer[] = []
   for (const key of config.slicers) {
     if (key === 'entity') {
@@ -524,15 +531,10 @@ function buildSlicers(model: NormalizedReport, facts: Fact[], config: PivotConfi
     }
     const axis = axisOf(key)
     if (!axis) continue
-    // A slicer dimension is diced to a single member (or its domain total).
-    let qual: DimensionQualifier | null = null
-    for (const f of facts) {
-      const d = (f.dimensions ?? []).find((x) => x.axis === axis)
-      if (d) {
-        qual = d
-        break
-      }
-    }
+    // A slicer dimension is diced to a single member (or its domain total) —
+    // the same coordinate the fact index binds cells against, so the chip
+    // states exactly what the cells show.
+    const qual = diced.get(axis) ?? null
     const axisLabel = qual?.axisLabel ?? humanize(axis)
     slicers.push({
       aspect: key,
@@ -573,20 +575,45 @@ export function buildPivot(
     (f.dimensions ?? []).every((d) => allowedAxes.has(d.axis) && dimensionInScope(scope, d))
   )
 
+  // Each slicer axis is diced to one coordinate: the (single) member its facts
+  // carry, or the domain total when no fact carries the axis. Cell binding and
+  // the slicer chips both read this map, so the chip states exactly which
+  // coordinate the cells show.
+  const dicedSlicers = new Map<string, DimensionQualifier | null>()
+  for (const axis of dimAxes(config.slicers)) {
+    const qual = facts.flatMap((f) => f.dimensions ?? []).find((d) => d.axis === axis) ?? null
+    dicedSlicers.set(axis, qual)
+  }
+
+  // A fact belongs in the table when every dimension it carries is either shown
+  // on rows/columns (where it contributes to the cell signature) or sits on a
+  // slicer axis at the diced coordinate. A fact on an axis this pivot doesn't
+  // place at all is a finer breakdown of a coarser cell; a fact at a different
+  // slicer coordinate is a sibling slice. Both are dropped — indexing either
+  // would collide with the cell's rightful fact.
+  const shownAxes = new Set([...rowDimAxes, ...colDimAxes])
+  const tableFacts = facts.filter((f) =>
+    (f.dimensions ?? []).every(
+      (d) =>
+        shownAxes.has(d.axis) ||
+        (dicedSlicers.has(d.axis) && memberKey(d) === memberKey(dicedSlicers.get(d.axis)))
+    )
+  )
+
   // Columns: period (outer) × member combos over the column axes (inner).
   const periodOnColumns = config.columns.includes('period')
-  let periods = periodOnColumns ? derivePeriods(model, facts) : []
+  let periods = periodOnColumns ? derivePeriods(model, tableFacts) : []
   if (periodOnColumns && config.dropSparsePeriods !== false) {
-    periods = pruneSparsePeriods(model, facts, periods)
+    periods = pruneSparsePeriods(model, tableFacts, periods)
   }
-  const colCombos = memberCombos(facts, colDimAxes, tree.indexOf, true)
+  const colCombos = memberCombos(tableFacts, colDimAxes, tree.indexOf, true)
 
   // Column coordinates that actually carry a fact. The member-combo union (and
   // cross-product across axes) yields many (period × member) columns that never
   // occur; drop the empty ones — the column analog of only emitting member rows
   // that have facts.
   const occupiedCols = new Set<string>()
-  for (const f of facts) {
+  for (const f of tableFacts) {
     const end = model.periods[f.period]?.end ?? ''
     occupiedCols.add(`${end}#${coordinate(memberByAxis(f), colDimAxes)}`)
   }
@@ -613,29 +640,28 @@ export function buildPivot(
   // Index every in-table fact by (element, rowCombo, periodEnd, colCombo) so a
   // cell is an O(1) exact-signature lookup — no last-write-wins collisions.
   //
-  // A fact whose coordinate carries an axis this pivot does NOT show (e.g. the
-  // per-segment revenue facts on the *face* income statement, where the segment
-  // axis is out of scope) is a finer breakdown of a coarser cell. Its dropped
-  // axis would make it key-identical to the consolidated fact and overwrite it —
-  // the classic dimensional collision. Skip it: only facts whose dimensions are
-  // all shown on this pivot's axes populate a cell, so the consolidated
-  // (undimensioned) fact owns the consolidated cell.
-  const shownAxes = new Set([...rowDimAxes, ...colDimAxes])
+  // A fact that doesn't carry a slicer axis is that axis's domain total and may
+  // still bind, but a fact AT the diced coordinate is more specific and wins the
+  // cell: with Consolidation Items diced to `Operating Segments`, the
+  // operating-segments total owns the aggregate cell, not the consolidated
+  // face-statement fact that shares its factset. Ascending-specificity insertion
+  // makes the map's last write the most specific fact.
+  const slicerSpecificity = (f: Fact): number =>
+    (f.dimensions ?? []).filter((d) => !shownAxes.has(d.axis)).length
   const factIndex = new Map<string, Fact>()
-  for (const f of facts) {
+  for (const f of [...tableFacts].sort((a, b) => slicerSpecificity(a) - slicerSpecificity(b))) {
     const byAxis = memberByAxis(f)
-    if ([...byAxis.keys()].some((axis) => !shownAxes.has(axis))) continue
     const end = model.periods[f.period]?.end ?? ''
     const rowSig = coordinate(byAxis, rowDimAxes)
     const colSig = coordinate(byAxis, colDimAxes)
     factIndex.set(`${f.element}␟${rowSig}␟${end}␟${colSig}`, f)
   }
 
-  const factfulConcepts = new Set(facts.map((f) => f.element))
+  const factfulConcepts = new Set(tableFacts.map((f) => f.element))
   // Domain total last on rows too: member rows list first, then the concept's
   // own (memberless) total below and outdented — the accounting "components then
   // total" layout, so the total reads as the sum of the members above it.
-  const rowCombos = memberCombos(facts, rowDimAxes, tree.indexOf, true)
+  const rowCombos = memberCombos(tableFacts, rowDimAxes, tree.indexOf, true)
   const combosForConcept = (element: string): MemberCombo[] => {
     if (rowDimAxes.length === 0) return rowCombos // single domain combo
     return rowCombos.filter((combo) =>
@@ -764,11 +790,11 @@ export function buildPivot(
     structureName: ib.structureId ? null : (structure?.structureName ?? ib.label ?? null),
     definition: structure?.definition ?? null,
     kind: structure?.kind ?? null,
-    slicers: buildSlicers(model, facts, config),
+    slicers: buildSlicers(model, config, dicedSlicers),
     columnHeaders,
     columns,
     rows,
-    scale: resolveScale(facts, model, config.scale),
+    scale: resolveScale(tableFacts, model, config.scale),
     config,
   }
 }
