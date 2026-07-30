@@ -257,7 +257,7 @@ export function StatementTable({
                       }}
                       title={row.element.qname}
                     >
-                      {row.element.label}
+                      {row.label ?? row.element.label}
                     </td>
                   </tr>
                 )
@@ -359,14 +359,18 @@ export function StatementTable({
                     }
                     // No fact for this coordinate → blank; a fact that is null or
                     // a genuine $0 (Commitments & Contingencies, zero balance) →
-                    // an em-dash; anything else → the formatted value.
+                    // an em-dash; anything else → the formatted value. A negated
+                    // preferred label flips the *displayed* sign only — the
+                    // as-filed table shows `Less short-term portion (999)` for a
+                    // fact tagged +999; the fact itself stays untouched.
+                    const shown = row.negated && cell.value !== null ? -cell.value : cell.value
                     const display = isText
                       ? (duration ?? cell.textValue)
                       : cell.fact === null
                         ? ''
-                        : cell.value === 0
+                        : shown === 0
                           ? '—'
-                          : formatValue(cell.value, {
+                          : formatValue(shown, {
                               numericKind: kind,
                               symbol: cellSymbol(unit),
                               scaleFactor: scale.factor,
@@ -398,6 +402,6 @@ export function StatementTable({
  * rather than the concept repeated on every line.
  */
 function rowLabel(row: PivotRow): string {
-  if (!row.members.length) return row.element.label
+  if (!row.members.length) return row.label ?? row.element.label
   return row.members.map((m) => m.memberLabel).join(' · ')
 }

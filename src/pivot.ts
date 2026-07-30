@@ -561,6 +561,24 @@ export function buildPivot(
     ? presentationTree(model, structure.id)
     : { childrenOf: new Map(), roots: [], indexOf: new Map() }
 
+  // The filer's per-arc label choice from the presentation network: the label
+  // string that names the row and — for `negated*` roles — a display-sign flip
+  // (`Less short-term portion (999)` for a fact tagged +999). First arc to a
+  // child wins within a structure.
+  const preferredByChild = new Map<string, { label: string | null; negated: boolean }>()
+  if (structure) {
+    for (const a of model.presAssociations) {
+      if (a.structure !== structure.id) continue
+      if (!a.preferredLabel && !a.preferredLabelRole) continue
+      if (!preferredByChild.has(a.child)) {
+        preferredByChild.set(a.child, {
+          label: a.preferredLabel ?? null,
+          negated: (a.preferredLabelRole ?? '').includes('negated'),
+        })
+      }
+    }
+  }
+
   const rowDimAxes = dimAxes(config.rows)
   const colDimAxes = dimAxes(config.columns)
   const allowedAxes = new Set([...rowDimAxes, ...colDimAxes, ...dimAxes(config.slicers)])
@@ -709,6 +727,9 @@ export function buildPivot(
     const el = elementOf(model, id)
     const combos = combosForConcept(id)
     if (!combos.length) return
+    const pref = preferredByChild.get(id)
+    const rowLabel = pref?.label ?? undefined
+    const negated = pref?.negated || undefined
     // With dimensions on rows, a concept's own total row heads its indented member
     // breakdown and supplies the concept name. When the concept has *no*
     // consolidated total (only per-member facts — common in detail disclosures),
@@ -723,6 +744,8 @@ export function buildPivot(
         isSubtotal: subtotals.has(id),
         members: [],
         cells: columns.map(() => ({ value: null, fact: null, textValue: null })),
+        label: rowLabel,
+        negated,
       })
     }
     for (const combo of combos) {
@@ -737,6 +760,8 @@ export function buildPivot(
         isSubtotal: subtotals.has(id),
         members: combo.members,
         cells: cellsFor(id, combo.sig),
+        label: rowLabel,
+        negated,
       })
     }
   }
@@ -763,6 +788,7 @@ export function buildPivot(
           isSubtotal: false,
           members: [],
           cells: [],
+          label: preferredByChild.get(id)?.label ?? undefined,
         })
       }
       const childDepth = scaffold ? depth : depth + 1
