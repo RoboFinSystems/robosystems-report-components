@@ -447,3 +447,86 @@ describe('mergeSecSections — whole-report reconstruction', () => {
     expect(buildPivots(merged)).toHaveLength(2)
   })
 })
+
+describe('sec adapter — presentation-arc preferred labels', () => {
+  const NEG = 'http://www.xbrl.org/2009/role/negatedTerseLabel'
+  const STD = 'http://www.xbrl.org/2003/role/label'
+  const LTDC_URI = 'http://fasb.org/us-gaap/2025#LongTermDebtCurrent'
+  const prefShell: SecReportShell = {
+    reportId: 'r2',
+    entity: { id: 'e2', name: 'Co', legalName: null, country: null },
+    sections: [],
+    labels: {
+      byElement: new Map([
+        [
+          LTDC_URI,
+          new Map([
+            [STD, 'Long-Term Debt, Current Maturities'],
+            [NEG, 'Less short-term portion'],
+          ]),
+        ],
+      ]),
+    },
+  }
+  const prefSection: SecSection = {
+    id: 'struct-debt',
+    title: 'Debt - Schedule of Long-term Debt (Details)',
+    kind: 'Disclosure',
+    definition: '9999 - Disclosure - Debt - Schedule of Long-term Debt (Details)',
+    canonicalType: null,
+    order: 0,
+    factsetIds: ['fs-debt'],
+  }
+  const prefQuery: SecQuery = async (cypher) => {
+    if (cypher.includes('FACT_HAS_UNIT')) return []
+    if (cypher.includes('STRUCTURE_HAS_ASSOCIATION')) {
+      return [
+        {
+          association_type: 'Presentation',
+          order_value: 1,
+          parent: 'us-gaap:DebtDisclosureAbstract',
+          parent_uri: 'http://fasb.org/us-gaap/2025#DebtDisclosureAbstract',
+          parent_name: 'DebtDisclosureAbstract',
+          parent_abstract: true,
+          child: 'us-gaap:LongTermDebtCurrent',
+          child_uri: LTDC_URI,
+          child_name: 'LongTermDebtCurrent',
+          child_abstract: false,
+          preferred_label: NEG,
+        },
+      ]
+    }
+    if (cypher.includes('FACT_HAS_ELEMENT')) {
+      return [
+        {
+          fid: 'f-ltdc',
+          qname: 'us-gaap:LongTermDebtCurrent',
+          euri: LTDC_URI,
+          ename: 'LongTermDebtCurrent',
+          is_numeric: true,
+          item_type: 'monetaryItemType',
+          numeric_value: 999,
+          raw_value: '999',
+          pid: 'p1',
+          period_type: 'instant',
+          end_date: '2026-01-25',
+        },
+      ]
+    }
+    return []
+  }
+
+  it('resolves the arc label from the report linkbase and flags negation', async () => {
+    const report = await fetchSecSection(prefQuery, prefShell, prefSection)
+    const arc = report.presAssociations[0]
+    expect(arc.preferredLabelRole).toBe(NEG)
+    expect(arc.preferredLabel).toBe('Less short-term portion')
+
+    const table = buildPivots(report)[0]
+    const row = table.rows.find((r) => r.element.qname === 'us-gaap:LongTermDebtCurrent')
+    expect(row?.label).toBe('Less short-term portion')
+    expect(row?.negated).toBe(true)
+    // Presentation only — the fact keeps its tagged sign.
+    expect(row?.cells.some((c) => c.fact?.value === 999)).toBe(true)
+  })
+})
