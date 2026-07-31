@@ -25,13 +25,7 @@ export type BalanceType = 'debit' | 'credit'
  * back to `monetary ? 'monetary' : 'other'`.
  */
 export type NumericKind =
-  | 'monetary'
-  | 'perShare'
-  | 'shares'
-  | 'percent'
-  | 'pure'
-  | 'integer'
-  | 'other'
+  'monetary' | 'perShare' | 'shares' | 'percent' | 'pure' | 'integer' | 'other'
 
 /** A reportable concept (a taxonomy element). */
 export interface ElementInfo {
