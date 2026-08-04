@@ -54,7 +54,7 @@ jobs:
         env:
           VERSION: ${{ steps.get-version.outputs.version }}
         run: |
-          if [ $(git tag -l "v${VERSION}") ]; then
+          if [ -n "$(git tag -l "v${VERSION}")" ]; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
             echo "Tag v${VERSION} already exists"
           else
@@ -84,12 +84,10 @@ jobs:
       - name: Analyze changes since last release
         if: steps.check-tag.outputs.tag_exists == 'false'
         id: analyze-changes
-        env:
-          VERSION: ${{ steps.get-version.outputs.version }}
         run: |
-          # Get the last release tag. The pattern is anchored at both ends so
-          # only strict vN.N.N tags are eligible — a tag that merely starts
-          # with a version prefix is not treated as a previous release.
+          # Get the last release tag. The pattern is anchored at both ends so only
+          # a strict vMAJOR.MINOR.PATCH tag can be selected: LAST_TAG flows into
+          # later git commands and prompt text, so it must not carry trailing text.
           LAST_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
 
           if [ -z "$LAST_TAG" ]; then
@@ -243,10 +241,13 @@ jobs:
               ]
             }')
 
-          # The API key is fed to curl on stdin as a config file rather than as
-          # an argument. Writing -H "x-api-key: $ANTHROPIC_API_KEY" would not
-          # help: the shell expands the variable before exec, so the literal
-          # key would still end up in the curl process's argument list.
+            # The credential is fed to curl through a config file on stdin rather
+            # than an -H flag. Writing -H "x-api-key: $ANTHROPIC_API_KEY" would not
+            # help: the shell expands the variable before exec, so the literal key
+            # still lands in the curl process argv, which any other process on the
+            # runner can read. printf is a bash builtin, so it adds no process of
+            # its own, and curl parses the config at startup so --retry resends the
+            # header correctly.
           RESPONSE=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
             | curl -s --config - --max-time 60 --retry 3 --retry-delay 10 -X POST "https://api.anthropic.com/v1/messages" \
               -H "Content-Type: application/json" \
