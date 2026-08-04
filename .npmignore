@@ -36,4 +36,5 @@ scripts/
 node_modules/
 coverage/
 .vite/
+CLAUDE.md
 CLAUDE.local.md
