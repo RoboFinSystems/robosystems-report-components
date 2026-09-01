@@ -16,6 +16,10 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    # Pushes the version commit to main and to the release branch. Falls back
+    # to github.token when ACTIONS_TOKEN is absent, so the job needs write.
+    permissions:
+      contents: write
     outputs:
       new_version: ${{ steps.new-version.outputs.new_version }}
       branch_name: ${{ steps.new-version.outputs.branch_name }}
@@ -130,6 +134,9 @@ jobs:
     needs: [create-release, create-tag]
     if: always()
     runs-on: ubuntu-latest
+    # Writes to $GITHUB_STEP_SUMMARY only; touches nothing in the repo.
+    permissions:
+      contents: read
     steps:
       - name: Create summary
         run: |
