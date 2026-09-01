@@ -1,5 +1,67 @@
 version: 2
+
 updates:
+  # npm — package.json and package-lock.json dependencies
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    labels:
+      - 'dependencies'
+    # Routine minor/patch churn arrives as two PRs instead of a dozen.
+    # Majors are deliberately left ungrouped: they need individual triage,
+    # and grouping them would force an all-or-nothing call on unrelated bumps.
+    # That matters more here than in an app — the `dependencies` block
+    # (jsonld, marked, n3) is this package's public surface, and roboledger-app
+    # and roboinvestor-app both install it.
+    # vite-toolchain is the exception and is listed first (a dependency joins
+    # the first group it matches): those packages are peer-locked to each
+    # other, so they are already one decision.
+    groups:
+      # Only vitest matches today, but vite and @vitest/* are peer-locked to
+      # it (vitest peers vite; @vitest/coverage-v8 peers vitest at an exact
+      # version), so the group is here before it is needed rather than after
+      # a split major deadlocks two PRs against each other.
+      vite-toolchain:
+        patterns:
+          - 'vite'
+          - 'vitest'
+          - '@vitejs/*'
+          - '@vitest/*'
+      npm-production:
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      npm-development:
+        dependency-type: 'development'
+        update-types:
+          - 'minor'
+          - 'patch'
+    ignore:
+      # Blocked upstream: typescript-eslint v8 peers typescript
+      # ">=4.8.4 <6.1.0". TypeScript 7 is also the native Go port, so it is a
+      # migration to schedule rather than a bump to take. Drop this entry once
+      # typescript-eslint v9 supports the 7.x line.
+      - dependency-name: 'typescript'
+        update-types:
+          - 'version-update:semver-major'
+      #
+      # Deliberately absent, in case someone copies this file from a sibling:
+      #
+      # - No `eslint` major ignore. The frontend apps and robosystems-core
+      #   block ESLint 10 because eslint-plugin-jsx-a11y and eslint-plugin-react
+      #   cap at ^9; this package depends on neither, so ESLint 10 may install
+      #   cleanly here and is worth attempting rather than pre-emptively
+      #   blocking.
+      #
+      # - No `@types/node` major ignore. The sibling repos pin theirs to the
+      #   runtime floor they declare, but this package's floor and its types
+      #   already disagree: engines says >=18.0.0 while @types/node is ^22.
+      #   Encoding "types track the floor" here would assert something that is
+      #   not currently true. Reconcile engines and @types/node first, then add
+      #   the ignore anchored to whichever floor is the real one.
+
   # GitHub Actions — pinned action versions
   - package-ecosystem: 'github-actions'
     directory: '/'
@@ -7,3 +69,10 @@ updates:
       interval: 'monthly'
     labels:
       - 'dependencies'
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
