@@ -28,6 +28,19 @@ updates:
           - 'vitest'
           - '@vitejs/*'
           - '@vitest/*'
+      # @eslint/js peers eslint at the *same* major (10.x peers ^10.0.0), so
+      # the two can only ever move together. Dependabot proposed them as two
+      # separate PRs on 2026-09-01 (#44 eslint, #45 @eslint/js) and #45 went
+      # red immediately — @eslint/js 10 against eslint 9 cannot resolve. No
+      # update-types filter, so majors travel together. typescript-eslint and
+      # the prettier bridge peer eslint across a range and ride along safely.
+      eslint:
+        patterns:
+          - 'eslint'
+          - '@eslint/js'
+          - 'typescript-eslint'
+          - 'eslint-config-prettier'
+          - 'eslint-plugin-prettier'
       npm-production:
         dependency-type: 'production'
         update-types:
