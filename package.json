@@ -56,6 +56,10 @@
     "marked": "^18.0.6",
     "n3": "^2.6.4"
   },
+  "//overrides": "esbuild is forced to ^0.28.1 to clear GHSA-g7r4-m6w7-qqqr. It reaches us only through tsup, which caps at ^0.27.0 even at its latest release (8.5.1), so npm cannot resolve the fix on its own. REMOVE once tsup depends on esbuild >= 0.28.1.",
+  "overrides": {
+    "esbuild": "^0.28.1"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testing-library/react": "^16.3.0",
