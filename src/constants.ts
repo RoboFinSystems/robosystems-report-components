@@ -124,8 +124,12 @@ export function humanize(iri: string): string {
  * stripping would empty the label (a label that is only the tag), keep the
  * original.
  */
+// The leading `\s*` is deliberately absent: paired with the `$` anchor it made
+// the match quadratic in the length of a run of spaces (CodeQL js/polynomial-redos
+// — 40k spaces took ~860ms), and it was redundant anyway because
+// `stripRoleSuffix` trims the result.
 const ROLE_SUFFIX_RE =
-  /\s*\[(?:Abstract|Axis|Member|Table|Line Items|Domain|Roll Forward|Roll Up|Text Block|Policy Text Block|Table Text Block|Extensible List|Extensible Enumeration|Flag)\]\s*$/i
+  /\[(?:Abstract|Axis|Member|Table|Line Items|Domain|Roll Forward|Roll Up|Text Block|Policy Text Block|Table Text Block|Extensible List|Extensible Enumeration|Flag)\]\s*$/i
 export function stripRoleSuffix(label: string): string {
   const stripped = label.replace(ROLE_SUFFIX_RE, '').trim()
   return stripped || label

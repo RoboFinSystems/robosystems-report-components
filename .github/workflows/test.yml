@@ -7,6 +7,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Build and test only: no SARIF upload, no writes back to the repo.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
