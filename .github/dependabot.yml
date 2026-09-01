@@ -46,21 +46,22 @@ updates:
       - dependency-name: 'typescript'
         update-types:
           - 'version-update:semver-major'
+      # @types/node tracks the runtime floor, not npm's cadence. This package
+      # declares engines >=22.0.0 — matching robosystems-core and
+      # robosystems-typescript-client, the other two published libraries — and
+      # as a library it has to keep compiling for the oldest Node it claims to
+      # support. Newer types would let code referencing Node 24+ APIs typecheck
+      # clean here and still break a consumer on Node 22. Drop this entry when
+      # engines moves off >=22.
+      - dependency-name: '@types/node'
+        update-types:
+          - 'version-update:semver-major'
       #
       # Deliberately absent, in case someone copies this file from a sibling:
-      #
-      # - No `eslint` major ignore. The frontend apps and robosystems-core
-      #   block ESLint 10 because eslint-plugin-jsx-a11y and eslint-plugin-react
-      #   cap at ^9; this package depends on neither, so ESLint 10 may install
-      #   cleanly here and is worth attempting rather than pre-emptively
-      #   blocking.
-      #
-      # - No `@types/node` major ignore. The sibling repos pin theirs to the
-      #   runtime floor they declare, but this package's floor and its types
-      #   already disagree: engines says >=18.0.0 while @types/node is ^22.
-      #   Encoding "types track the floor" here would assert something that is
-      #   not currently true. Reconcile engines and @types/node first, then add
-      #   the ignore anchored to whichever floor is the real one.
+      # no `eslint` major ignore. The frontend apps and robosystems-core block
+      # ESLint 10 because eslint-plugin-jsx-a11y and eslint-plugin-react cap at
+      # ^9; this package depends on neither, so ESLint 10 may install cleanly
+      # here and is worth attempting rather than pre-emptively blocking.
 
   # GitHub Actions — pinned action versions
   - package-ecosystem: 'github-actions'
