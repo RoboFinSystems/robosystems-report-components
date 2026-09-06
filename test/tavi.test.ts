@@ -556,3 +556,42 @@ describe('report format detection', () => {
     await expect(parseReportDocument('{"facts":[]}')).rejects.toThrow('Not a report document')
   })
 })
+
+describe('tavi adapter — a RoboLedger report', () => {
+  // The first Tavi produced from a ledger report rather than a filing: the
+  // robosystems bridge feeds xbrlkit's emitter, so the file has the SEC shape
+  // (composed role definitions, exclusive-end periods) but no dei facts — the
+  // entity is named by its label — and the platform's own entity scheme.
+  const doc = readFileSync(join(here, 'fixtures', 'roboledger-demo.tavi.json'), 'utf8')
+
+  it('names the entity from its label and titles the four statements by block', () => {
+    const r = parseTavi(JSON.parse(doc))
+    expect(r.entity).toMatchObject({
+      id: 'entity:entity_kg1a078514c0dd31349d58',
+      name: 'Cascade Advisory Group LLC',
+    })
+    expect(r.structures.map((s) => [s.kind, s.structureName])).toEqual([
+      ['Statement', 'Balance Sheet'],
+      ['Statement', 'Income Statement'],
+      ['Statement', 'Cash Flow Statement'],
+      ['Statement', 'Statement of Changes in Equity'],
+    ])
+    expect(r.structures.map((s) => s.definition)).toEqual([
+      '0001 - Statement - Balance Sheet',
+      '0002 - Statement - Income Statement',
+      '0003 - Statement - Cash Flow Statement',
+      '0004 - Statement - Statement of Changes in Equity',
+    ])
+  })
+
+  it('pivots the balance sheet with the holon renderer’s sections and totals', () => {
+    const r = parseTavi(JSON.parse(doc))
+    const pivots = buildPivots(r)
+    expect(pivots.map((p) => p.title)).toEqual(reportSections(r).map((s) => s.title))
+    const balance = pivots[0]
+    expect(balance.columns.map((c) => c.period?.end)).toEqual(['2025-12-31'])
+    expect(rowCellAt(balance, 'rs-gaap:Assets', '2025-12-31')).toBeCloseTo(57985.02, 2)
+    expect(rowCellAt(balance, 'rs-gaap:Liabilities', '2025-12-31')).toBe(800)
+    expect(r.calcAssociations.some((a) => a.weight === -1 || a.weight === 1)).toBe(true)
+  })
+})
