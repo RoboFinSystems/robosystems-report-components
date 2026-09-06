@@ -8,7 +8,7 @@ A source-agnostic React library for rendering XBRL-grade financial statements. T
 ## Features
 
 - **Components** — `ReportView`, `StatementTable`, `FactInspector`, and `ExternalTextBlock` for full statements down to per-fact inspection
-- **Four reference adapters** (under `/adapters`) — `parseJsonld` for canonical `holon.jsonld` files, `cypherAdapter` for live graphs over GraphQL, `fetchSecReportShell`/`fetchSecSection` for the SEC repository, and `parseStore` for pre-parsed RDF stores
+- **Five reference adapters** (under `/adapters`) — `parseJsonld` for canonical `holon.jsonld` files, `parseTavi` for `tavi.json` (the same filing as a Project Tavi compiled model, XBRL International's draft — the same facts, walked directly with no RDF step; `parseReportDocument` sniffs which of the two it was handed), `cypherAdapter` for live graphs over GraphQL, `fetchSecReportShell`/`fetchSecSection` for the SEC repository, and `parseStore` for pre-parsed RDF stores
 - **Correct-by-construction rendering** — presentation-order walk, calculation-subtotal footing, multi-factSet facts, and structure-title/kind parsing shared across all sources
 - **Plain React, ESM, tree-shakeable** — `react`/`react-dom` peers only, no framework-specific imports; the same package feeds a Next.js app or a lightweight Vite app
 
