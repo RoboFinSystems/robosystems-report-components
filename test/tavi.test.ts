@@ -319,6 +319,30 @@ describe('tavi adapter — the model', () => {
     expect(r.entity).toMatchObject({ id: 'rpt:cik-0000000001', name: 'ACME CORP' })
   })
 
+  it('names the entity from its label when there is no registrant-name fact', () => {
+    const doc = structuredClone(DOC)
+    doc.xbrlModel.entities = [{ name: 'entity:ent_01' }]
+    doc.xbrlModel.labels = [
+      ...doc.xbrlModel.labels,
+      {
+        forObject: 'entity:ent_01',
+        labelType: 'xbrl:label',
+        value: 'Lemonade Stand LLC',
+        language: 'en',
+      },
+    ]
+    doc.xbrlModel.facts = doc.xbrlModel.facts.filter(
+      (f) => f.factDimensions['xbrl:concept'] !== 'dei:EntityRegistrantName'
+    )
+    expect(parseTavi(doc).entity).toMatchObject({
+      id: 'entity:ent_01',
+      name: 'Lemonade Stand LLC',
+      legalName: 'Lemonade Stand LLC',
+    })
+    // The registrant-name fact still wins when a filing carries one.
+    expect(parseTavi(DOC).entity?.name).toBe('ACME CORP')
+  })
+
   it('types concepts from their datatype, balance and — for shares — their unit', () => {
     expect(r.elements['us-gaap:Assets']).toMatchObject({
       label: 'Assets',
