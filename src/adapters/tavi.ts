@@ -509,12 +509,15 @@ export function parseTavi(doc: string | object): NormalizedReport {
   }
 
   // ── Entity, report identity ──
+  // A filing names its registrant in a dei fact; a model with no dei facts (a
+  // ledger's own report) carries the name as a label on the entity object.
   const entityName = model.entities?.[0]?.name ?? null
+  const entityLabel = entityName ? labelOf(entityName) : null
   const entity: EntityInfo | null = entityName
     ? {
         id: entityName,
-        name: registrantName ?? humanize(entityName),
-        legalName: registrantName,
+        name: registrantName ?? entityLabel ?? humanize(entityName),
+        legalName: registrantName ?? entityLabel,
         country: null,
       }
     : null
