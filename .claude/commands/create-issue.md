@@ -7,7 +7,7 @@ Create a GitHub issue for the current repository based on the user's input.
 
 ## Instructions
 
-1. **Check you're in the right repo, and the right layer** - This package renders XBRL-grade financial statements from a `NormalizedReport`. It is source-agnostic and framework-free by design, and it is consumed in production by `roboledger-app` and `robosystems-holon-viewer`. Most reports of "the statement is wrong" resolve to one of four layers — say which:
+1. **Check you're in the right repo, and the right layer** - This package renders XBRL-grade financial statements from a `NormalizedReport`. It is source-agnostic and framework-free by design, and it is consumed in production by `roboledger-app` and `xbrlkit-viewer`. Most reports of "the statement is wrong" resolve to one of four layers — say which:
    - **The data** — the facts, elements, periods, units, or the calculation/presentation association networks are wrong at the source. That belongs in `RoboFinSystems/robosystems` (or whatever produced the document). This library renders what it is given; a wrong number that is wrong in the source is not a bug here.
    - **An adapter** (`src/adapters/`) — the source was right but the translation into `NormalizedReport` dropped or mangled something. One file per source (`jsonld`, `store`, `sec`, `cypher`), all behind the `ReportAdapter` contract in `types.ts`.
    - **The engine** (`src/pivot.ts`, `src/project.ts`, `src/sections.ts`, `src/format.ts`) — the normalization was right but the pivot, the presentation-order walk, the calculation-subtotal set, `footCheck`, or the formatting is wrong. This is source-independent: if it reproduces from more than one adapter, it lives here.
@@ -28,7 +28,7 @@ Create a GitHub issue for the current repository based on the user's input.
    - Whether **`footCheck`** flags it — a subtotal that doesn't foot is a different bug class from one that foots to the wrong number
    - A **minimal fixture** if you can produce one. Fixtures are how bugs in this repo get fixed; a described bug without one usually stalls.
 
-5. **Say whether it's a breaking change for consumers** - The package is **pre-1.0 but the exported surface is a real API contract**: `roboledger-app` and `robosystems-holon-viewer` both consume it in production. Exporting from `src/index.ts` (or `src/adapters/index.ts`) publishes a symbol downstream — **renames and removals are breaking even pre-1.0**. If the issue implies changing an exported name, a prop, or a rendered structure consumers style against, say so.
+5. **Say whether it's a breaking change for consumers** - The package is **pre-1.0 but the exported surface is a real API contract**: `roboledger-app` and `xbrlkit-viewer` both consume it in production. Exporting from `src/index.ts` (or `src/adapters/index.ts`) publishes a symbol downstream — **renames and removals are breaking even pre-1.0**. If the issue implies changing an exported name, a prop, or a rendered structure consumers style against, say so.
 
 6. **Sanitize for Public Visibility** - This repo is public and the issue is world-readable immediately. Before creating:
    - **Financial data is the main hazard here.** Real statements, balances, and entity names must not appear. Reconstruct the shape with invented figures — that's usually a _better_ bug report anyway, since it isolates the mechanism.
@@ -58,7 +58,7 @@ gh label list --limit 100
 
 ## Example Usage
 
-User: "Operating expenses shows a blank cell for FY2023 in the holon viewer"
+User: "Operating expenses shows a blank cell for FY2023 in the xbrlkit viewer"
 
 Response: Let me work out which layer that is...
 

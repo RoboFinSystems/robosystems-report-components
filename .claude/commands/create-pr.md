@@ -9,7 +9,7 @@ Create a GitHub pull request for the current branch, writing the title and descr
 
 A PR description written from the diff alone can't know _why_ a change was made, so it tends to describe things that aren't true — and those descriptions then feed `@claude` reviews, compounding the bad information. **You author the description here, where the full context is available.**
 
-This is `@robosystems/report-components` — a **published, source-agnostic React library** for rendering XBRL-grade financial statements, consumed in production by `roboledger-app` and `robosystems-holon-viewer`. It is pre-1.0, but the exported surface is a real API contract: a symbol re-exported from `src/index.ts` or `src/adapters/index.ts` is downstream API, and renames or removals are breaking regardless of the version number.
+This is `@robosystems/report-components` — a **published, source-agnostic React library** for rendering XBRL-grade financial statements, consumed in production by `roboledger-app` and `xbrlkit-viewer`. It is pre-1.0, but the exported surface is a real API contract: a symbol re-exported from `src/index.ts` or `src/adapters/index.ts` is downstream API, and renames or removals are breaking regardless of the version number.
 
 **This repository is public.** The PR title and body are world-readable the moment they're pushed, and publishing is triggered by a push to `release/**` rather than by a merge — so the text is often public before the version that carries it.
 
@@ -56,7 +56,7 @@ TARGET=${1:-main}            # override target via the first argument
 - **Respect the adapter seam — and say if you didn't.** An adapter turns its source into a `NormalizedReport` and nothing more; the presentation walk, subtotal footing, and table projection are identical for every source. **A source-specific branch inside `pivot`, `project`, or a component is an architecture violation**, not a shortcut — if the PR contains one, say so explicitly and explain why no adapter-level fix was possible. A new source means a new adapter.
 
 - **Consumer Impact is a required judgment:**
-  - **Breaking** — a removed or renamed export, a changed prop, or altered rendered structure that consumer CSS or tests depend on. Both `roboledger-app` and `robosystems-holon-viewer` need coordinated adoption; say what each must change.
+  - **Breaking** — a removed or renamed export, a changed prop, or altered rendered structure that consumer CSS or tests depend on. Both `roboledger-app` and `xbrlkit-viewer` need coordinated adoption; say what each must change.
   - **Additive** — new exports, new optional props, a new adapter. Free, but name it.
   - **Internal** — engine refactors, tests, tooling that leave the exported surface and rendered output identical.
 

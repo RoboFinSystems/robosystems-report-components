@@ -4,7 +4,7 @@ description: Review the staged diff against this library's adapter seam, numeric
 
 Review all staged changes (`git diff --cached`) with focus on the contexts below. Read the diff first — if nothing is staged, say so rather than reviewing the working tree.
 
-This is `@robosystems/report-components`: a **published, source-agnostic React library** for rendering XBRL-grade financial statements. Plain React + ESM, `react`/`react-dom` as peers only, no framework imports. Pre-1.0, but consumed in production by `roboledger-app` and `robosystems-holon-viewer`, so the exported surface is a real API contract. It is a **public repository**.
+This is `@robosystems/report-components`: a **published, source-agnostic React library** for rendering XBRL-grade financial statements. Plain React + ESM, `react`/`react-dom` as peers only, no framework imports. Pre-1.0, but consumed in production by `roboledger-app` and `xbrlkit-viewer`, so the exported surface is a real API contract. It is a **public repository**.
 
 ## The adapter seam (decides most verdicts)
 
@@ -24,7 +24,7 @@ This library renders numbers people reconcile against. Treat any change to what 
 
 ## Public API
 
-- Exporting from `src/index.ts` (or `src/adapters/index.ts` for adapters) **publishes the symbol downstream**. Renames and removals are breaking **even pre-1.0** — `roboledger-app` and `robosystems-holon-viewer` both consume this in production.
+- Exporting from `src/index.ts` (or `src/adapters/index.ts` for adapters) **publishes the symbol downstream**. Renames and removals are breaking **even pre-1.0** — `roboledger-app` and `xbrlkit-viewer` both consume this in production.
 - Is new surface actually re-exported from one of the two entries? If not, consumers cannot reach it and the change is inert.
 - Changed props or altered rendered structure count as breaking when consumer CSS or tests depend on them.
 

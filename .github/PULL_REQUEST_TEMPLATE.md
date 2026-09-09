@@ -17,7 +17,7 @@
 ## Consumer Impact
 
 <!-- Required judgment, not an optional section. Pre-1.0, but roboledger-app and
-     robosystems-holon-viewer both consume this in production, so exports are a real contract.
+     xbrlkit-viewer both consume this in production, so exports are a real contract.
      - BREAKING: a removed or renamed export, a changed prop, or altered rendered structure that
        consumer CSS or tests depend on. Renames and removals are breaking even pre-1.0.
      - ADDITIVE: new exports, new optional props, a new adapter.

@@ -19,7 +19,7 @@ So **merging a PR to `main` publishes nothing** — the release-branch push is t
 
 - **`gh` reads are free; triggering a release is not.** Reading runs, jobs, and logs needs no confirmation. **Dispatching `create-release.yml`** is outward-facing and effectively irreversible — an npm version cannot be unpublished after 72 hours, and unpublishing breaks consumers. Confirm the bump type and ref with the user; default to watching a run they already started.
 - **Never bump `version` in `package.json` by hand.** The workflow owns it.
-- **A breaking release is a two-consumer event.** `roboledger-app` and `robosystems-holon-viewer` both use this in production, and renames or removals are breaking **even pre-1.0**. If the change set carries one, say so and stop rather than dispatching.
+- **A breaking release is a two-consumer event.** `roboledger-app` and `xbrlkit-viewer` both use this in production, and renames or removals are breaking **even pre-1.0**. If the change set carries one, say so and stop rather than dispatching.
 - **Curated notes must already be merged.** If this release deserves them and the file isn't on `main` yet, dispatching now permanently gets the generated changelog instead.
 
 ## 1. Find the run
