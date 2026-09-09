@@ -36,7 +36,7 @@ export function Report() {
 
 ## Status
 
-**Pre-1.0.** Published to npm and consumed in production by RoboLedger and the RoboSystems holon viewer. The API surface may still evolve between minor versions until 1.0.
+**Pre-1.0.** Published to npm and consumed in production by RoboLedger and the xbrlkit viewer. The API surface may still evolve between minor versions until 1.0.
 
 ## Resources
 

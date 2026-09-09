@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `@robosystems/report-components` — a published, MIT-licensed npm package: source-agnostic React
 components for rendering XBRL-grade financial statements. Plain React + ESM, `react`/`react-dom` as
 peer deps only, no framework imports. **Pre-1.0**, but consumed in production by `roboledger-app` and
-`robosystems-holon-viewer`, so the exported surface is a real API contract.
+`xbrlkit-viewer`, so the exported surface is a real API contract.
 
 ## Commands
 
