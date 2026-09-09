@@ -39,7 +39,7 @@ gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<NUMBE
 - Formal `reviews` and inline comments are typically **empty**, `reviewDecision` blank. That's the norm, not a skipped review.
 - **AI review is opt-in** — `claude.yml` fires only on an `@claude` mention from an `OWNER`/`MEMBER`/`COLLABORATOR`, and findings land as a **bot comment in `comments`**, not a formal review.
 - CI runs the full gate on **Node 22 and 24**, plus a **"Verify dist loads under Node ESM"** step. That step is this repo's signature check — it exists because tsc's `moduleResolution: "Bundler"` output is unloadable by Node's native resolver, and it's what catches a build-config regression.
-- **What CI cannot see: the consumers.** Nothing installs the built package into `roboledger-app` or `robosystems-holon-viewer`. Green CI means it builds and loads, not that statements still render correctly downstream.
+- **What CI cannot see: the consumers.** Nothing installs the built package into `roboledger-app` or `xbrlkit-viewer`. Green CI means it builds and loads, not that statements still render correctly downstream.
 - `NEUTRAL`/`SKIPPED` conclusions are not failures.
 
 ### 4. Review the Diff
@@ -47,7 +47,7 @@ gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<NUMBE
 - **Adapter seam first.** An adapter turns its source into a `NormalizedReport` and nothing more; the presentation walk, subtotal footing, and projection are identical for every source. **A source-specific branch inside `pivot`, `project`, `sections`, or a component is an architecture violation** — flag it as blocking and ask what prevented an adapter-level fix. A new source means a new adapter behind the `ReportAdapter` contract.
 - **Changed numbers.** Does the diff alter a rendered value, a subtotal, a scaling or formatting rule, or `footCheck`? Those need a before/after in the description and a fixture that pins them. A silent numeric change is the worst thing this library can ship — consumers reconcile real statements against it.
 - **Pivot correctness.** A section is a hypercube and each cell is keyed on a fact's **full aspect signature**. A change that loosens that key produces cells that look plausible and are wrong — the hardest failure mode here to spot by eye. Read such a change against the fixtures, not the prose.
-- **Public API.** Exports from `src/index.ts` / `src/adapters/index.ts` are downstream API for `roboledger-app` and `robosystems-holon-viewer`. Renames and removals are **breaking even pre-1.0**. Is new surface actually re-exported from an entry? If not, consumers can't reach it.
+- **Public API.** Exports from `src/index.ts` / `src/adapters/index.ts` are downstream API for `roboledger-app` and `xbrlkit-viewer`. Renames and removals are **breaking even pre-1.0**. Is new surface actually re-exported from an entry? If not, consumers can't reach it.
 - **Framework purity.** `react` / `react-dom` are external peers, and **no framework import belongs in this package** — a `next/*` import is blocking, not a nit; it would break the non-Next consumer.
 - **Build config.** Changes to `tsup.config.ts` (entries, `external`, `splitting`, `dts`) or to `package.json` `files`/`.npmignore` decide what ships and whether it loads. Read them with real suspicion, and check the Node-ESM verification step still passes.
 - **Correctness / patterns**: does it do what the description says, and follow `CLAUDE.md`?
