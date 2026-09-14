@@ -290,6 +290,22 @@ function isStructuralScaffold(el: ElementInfo): boolean {
   return el.abstract && SCAFFOLD_LOCAL_RE.test(localName(el.qname))
 }
 
+/**
+ * A heading row that says exactly what the section header above it already
+ * says. Compared loosely — case and surrounding punctuation/whitespace differ
+ * between a role definition's title and a concept's standard label — but only
+ * on the whole string, so a genuine sub-heading is never swallowed.
+ */
+function restatesTitle(label: string, title: string): boolean {
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+  const normalized = normalize(label)
+  return normalized.length > 0 && normalized === normalize(title)
+}
+
 // ── Default configuration ───────────────────────────────────────────────────
 
 /**
@@ -840,6 +856,10 @@ export function buildPivot(
   // arcs — beginning balance at the top of the network, ending balance at the
   // bottom — and each emits its own row; every other repeat of an element is a
   // genuine duplicate and drops.
+  const title = ib.structureId
+    ? (structure?.structureName ?? ib.label ?? BLOCK_TITLES[ib.blockType] ?? ib.blockType)
+    : (BLOCK_TITLES[ib.blockType] ?? ib.label ?? ib.blockType)
+
   const seenInTree = new Set<string>()
   const walkedConcepts = new Set<string>()
   const walk = (arc: PresArcRef, depth: number): void => {
@@ -853,7 +873,13 @@ export function buildPivot(
     if (el.abstract) {
       // Hypercube scaffolding ([Table]/[Line Items]) is not a heading — hide its
       // row and keep its children at the current depth so the tree stays flat.
-      const scaffold = isStructuralScaffold(el)
+      // A root abstract that only restates the section's own title is the same
+      // kind of non-heading: it would print "Income Statement" immediately
+      // under the heading "Income Statement". rs-gaap gives the income
+      // statement such a root and the other three primaries none, so hiding it
+      // is also what makes the four read alike.
+      const scaffold =
+        isStructuralScaffold(el) || (depth === 0 && restatesTitle(arc.label ?? el.label, title))
       if (config.showAbstracts && !scaffold) {
         rows.push({
           key: id,
@@ -881,10 +907,6 @@ export function buildPivot(
     if (walkedConcepts.has(id) || elementOf(model, id).abstract) continue
     emitConcept(id, 0, null)
   }
-
-  const title = ib.structureId
-    ? (structure?.structureName ?? ib.label ?? BLOCK_TITLES[ib.blockType] ?? ib.blockType)
-    : (BLOCK_TITLES[ib.blockType] ?? ib.label ?? ib.blockType)
 
   return {
     ib,

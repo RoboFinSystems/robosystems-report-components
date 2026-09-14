@@ -187,7 +187,13 @@ export function parseStore(store: Store): NormalizedReport {
   // ── Information Blocks ──
   const informationBlocks: InformationBlock[] = []
   for (const id of subjectsOfType(IRI.InformationBlock)) {
+    // A block's prefLabel is the structure's role definition verbatim
+    // ("0001 - Statement - Balance Sheet"), so it is parsed exactly as
+    // `Structure.structureName` is below — otherwise the same report reads
+    // "Balance Sheet" through one projection and the raw sort code through the
+    // other, and the label is a section title either way.
     const blockLabel = firstValue(id, IRI.prefLabel)
+    const { title } = parseStructureName(blockLabel)
     informationBlocks.push({
       id,
       blockType: firstValue(id, IRI.blockType) ?? '',
@@ -196,7 +202,7 @@ export function parseStore(store: Store): NormalizedReport {
       // block-type classification, so structureId is how row order is found.
       structureId: firstValue(id, IRI.structure) ?? undefined,
       factSet: firstValue(id, IRI.factSet),
-      label: blockLabel ? stripRoleSuffix(blockLabel) : null,
+      label: title ? stripRoleSuffix(title) : null,
     })
   }
 
