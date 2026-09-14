@@ -130,7 +130,22 @@ export function footCheck(
   elementId: string,
   columnIndex: number
 ): FootCheck | null {
-  const kids: CalcAssociation[] = model.calcAssociations.filter((a) => a.parent === elementId)
+  // One arc per (structure, child). A summation cannot legitimately name the
+  // same child twice on one ELR, and a producer that emits the arc twice would
+  // otherwise count the child twice and report the subtotal as off by exactly
+  // that child (robosystems #1395: a disclosure's arcs reached the bundle from
+  // two paths, so its note footed to 2x its reported total). Deduplication is
+  // per structure, so the SEC adapter's per-section arcs — the same
+  // parent -> child presented on several sections — are untouched.
+  const kids: CalcAssociation[] = []
+  const seen = new Set<string>()
+  for (const a of model.calcAssociations) {
+    if (a.parent !== elementId) continue
+    const key = `${a.structure ?? ''}\u0000${a.child}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    kids.push(a)
+  }
   if (!kids.length) return null
 
   const valueOf = (id: string): number | null => {

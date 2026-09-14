@@ -79,11 +79,12 @@ export const IRI = {
 
 /**
  * Prefixes for compacting concept IRIs to `prefix:Local`. Order matters — the
- * most specific namespace must come first so `rs-gaap:` wins over `rs:`.
+ * most specific namespace must come first, so `disclosures:` wins over
+ * `rs-gaap:` and `rs-gaap:` over `rs:`.
  */
 const PREFIXES: ReadonlyArray<readonly [string, string]> = [
-  ['rs-gaap', NS.rsgaap],
   ['disclosures', 'https://robosystems.ai/taxonomy/rs-gaap/disclosures/v1/'],
+  ['rs-gaap', NS.rsgaap],
   ['us-gaap', 'http://fasb.org/us-gaap/'],
   ['dei', 'http://xbrl.sec.gov/dei/'],
   ['rs', NS.rs],
@@ -94,12 +95,25 @@ const PREFIXES: ReadonlyArray<readonly [string, string]> = [
   ['iso4217', NS.iso4217],
 ]
 
+/**
+ * A tenant's own extension taxonomy, whose prefix IS its single path segment
+ * (`…/taxonomy/driftline/InventoryRawMaterials` → `driftline:…`). The table
+ * above cannot list these: there is one namespace per tenant, minted when the
+ * tenant is. Checked after the table, and its single-segment shape can never
+ * shadow an entry there — every framework namespace is a deeper path.
+ */
+const TENANT_TAXONOMY_RE = /^https:\/\/robosystems\.ai\/taxonomy\/([^/]+)\/([^/#]+)$/
+
 /** Compact a concept IRI to `prefix:Local` (e.g. `rs-gaap:Assets`). */
 export function qname(iri: string): string {
   for (const [prefix, ns] of PREFIXES) {
     if (iri.startsWith(ns)) {
       return `${prefix}:${iri.slice(ns.length)}`
     }
+  }
+  const tenant = TENANT_TAXONOMY_RE.exec(iri)
+  if (tenant) {
+    return `${tenant[1]}:${tenant[2]}`
   }
   const slash = iri.lastIndexOf('/')
   const hash = iri.lastIndexOf('#')
