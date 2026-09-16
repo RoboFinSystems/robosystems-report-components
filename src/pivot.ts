@@ -392,31 +392,115 @@ function pruneSparsePeriods(
   const count = new Map<string, number>()
   for (const f of facts) {
     const populated = f.value !== null || (f.textValue != null && f.textValue !== '')
-    const end = model.periods[f.period]?.end
-    if (end && populated) count.set(end, (count.get(end) ?? 0) + 1)
+    const period = model.periods[f.period]
+    if (!period?.end || !populated) continue
+    const key = periodKey(period)
+    count.set(key, (count.get(key) ?? 0) + 1)
   }
-  const max = Math.max(0, ...count.values())
+  // A column's density is its own period's facts. The closing instants at a
+  // duration's end render inside it but do not make it a reporting period: a
+  // fourth-quarter stub a filer tags in an annual roll-forward has two facts of
+  // its own and shares the year's closing balances — those must not keep it.
+  const density = (p: PeriodInfo): number => count.get(periodKey(p)) ?? 0
+  const max = Math.max(0, ...periods.map(density))
   if (max < 5) return periods
   const threshold = Math.max(2, max * PERIOD_DENSITY_FRACTION)
-  return periods.filter((p) => (count.get(p.end) ?? 0) >= threshold)
+  return periods.filter((p) => density(p) >= threshold)
 }
 
-/** Period columns keyed by end date, preferring a duration as the representative. */
+/**
+ * The key a period column is built on. A duration is its whole span, so the
+ * three- and six-month columns a 10-Q reports to the same date stay distinct
+ * instead of collapsing into one column that shows whichever fact was indexed
+ * last; an instant is its date.
+ */
+function periodKey(period: PeriodInfo): string {
+  return period.type === 'duration' && period.startDate
+    ? `${period.startDate}/${period.end}`
+    : period.end
+}
+
+/**
+ * The fact keys a column reads: its own period and, for a duration, the instant
+ * at its end — a closing balance sits inside the flow column that ends on it.
+ */
+function columnPeriodKeys(period: PeriodInfo | null): string[] {
+  if (!period) return ['']
+  const key = periodKey(period)
+  return key === period.end ? [key] : [key, period.end]
+}
+
+/** Days a duration covers; 0 for an instant or a duration without a start. */
+function spanDays(period: PeriodInfo): number {
+  if (period.type !== 'duration' || !period.startDate) return 0
+  const start = Date.parse(period.startDate)
+  const end = Date.parse(period.endDate ?? period.end)
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0
+  return Math.round((end - start) / 86_400_000)
+}
+
+/** Whole months a duration covers, so a 52- and a 53-week year read as the same span. */
+function spanMonths(period: PeriodInfo): number {
+  const days = spanDays(period)
+  return days === 0 ? 0 : Math.max(1, Math.round(days / 30.44))
+}
+
+const MONTH_WORDS = [
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+  'Eleven',
+  'Twelve',
+]
+
+/**
+ * The header a duration column carries above its date when a table reports
+ * more than a plain year: "Three months ended" over the quarter columns, "Six
+ * months ended" over the year-to-date ones. An instant has no span.
+ */
+function spanLabel(period: PeriodInfo): string {
+  const months = spanMonths(period)
+  if (months === 0) return ''
+  if (months === 12) return 'Year ended'
+  const word = MONTH_WORDS[months - 1] ?? String(months)
+  return `${word} month${months === 1 ? '' : 's'} ended`
+}
+
+/** Shorter spans first (the quarters before the year-to-date), then by date. */
+function comparePeriods(a: PeriodInfo, b: PeriodInfo): number {
+  return (
+    spanMonths(a) - spanMonths(b) ||
+    (a.startDate ?? a.end).localeCompare(b.startDate ?? b.end) ||
+    a.end.localeCompare(b.end)
+  )
+}
+
+/**
+ * Period columns: every duration, keyed by its whole span, plus the instants no
+ * duration ends on. An instant that shares a duration's end is that column's
+ * closing balance, not a column of its own.
+ */
 function derivePeriods(model: NormalizedReport, facts: Fact[]): PeriodInfo[] {
-  const byEnd = new Map<string, PeriodInfo>()
+  const durations = new Map<string, PeriodInfo>()
+  const instants = new Map<string, PeriodInfo>()
   for (const fact of facts) {
     const period = model.periods[fact.period]
     if (!period || !period.end) continue
-    const existing = byEnd.get(period.end)
-    if (!existing || (existing.type === 'instant' && period.type === 'duration')) {
-      byEnd.set(period.end, period)
-    }
+    if (period.type === 'duration') durations.set(periodKey(period), period)
+    else instants.set(period.end, period)
   }
-  return [...byEnd.values()].sort((a, b) => {
-    const aStart = a.startDate ?? a.end
-    const bStart = b.startDate ?? b.end
-    return aStart.localeCompare(bStart) || a.end.localeCompare(b.end)
-  })
+  const durationEnds = new Set([...durations.values()].map((p) => p.end))
+  return [
+    ...durations.values(),
+    ...[...instants.values()].filter((p) => !durationEnds.has(p.end)),
+  ].sort(comparePeriods)
 }
 
 interface MemberCombo {
@@ -686,30 +770,42 @@ export function buildPivot(
   // that have facts.
   const occupiedCols = new Set<string>()
   for (const f of tableFacts) {
-    const end = model.periods[f.period]?.end ?? ''
-    occupiedCols.add(`${end}#${coordinate(memberByAxis(f), colDimAxes)}`)
+    const period = model.periods[f.period]
+    const key = period ? periodKey(period) : ''
+    occupiedCols.add(`${key}#${coordinate(memberByAxis(f), colDimAxes)}`)
   }
+  const occupied = (period: PeriodInfo | null, sig: string): boolean =>
+    columnPeriodKeys(period).some((key) => occupiedCols.has(`${key}#${sig}`))
+
+  // A table that reports anything other than plain years — a 10-Q's three- and
+  // six-month columns end on the same date — carries the span as a header level
+  // above the dates. A 10-K's year columns stay as they were.
+  const showSpans =
+    periodOnColumns && periods.some((p) => p.type === 'duration' && spanLabel(p) !== 'Year ended')
 
   const columns: PivotColumn[] = []
   const columnSegs: string[][] = []
   const periodList = periodOnColumns ? periods : [null]
   for (const period of periodList) {
     for (const combo of colCombos) {
-      const end = period?.end ?? ''
-      if (!occupiedCols.has(`${end}#${combo.sig}`)) continue
+      if (!occupied(period, combo.sig)) continue
+      const key = period ? periodKey(period) : ''
       const periodLabel = period ? formatDate(period.end) : ''
       columns.push({
-        key: `${end}#${combo.sig}`,
+        key: `${key}#${combo.sig}`,
         period,
         members: combo.members,
         label: combo.labels.length ? combo.labels[combo.labels.length - 1] : periodLabel,
       })
-      columnSegs.push([...(periodOnColumns ? [periodLabel] : []), ...combo.labels])
+      const periodSegs = periodOnColumns
+        ? [...(showSpans ? [period ? spanLabel(period) : ''] : []), periodLabel]
+        : []
+      columnSegs.push([...periodSegs, ...combo.labels])
     }
   }
   const columnHeaders = headerLevels(columnSegs)
 
-  // Index every in-table fact by (element, rowCombo, periodEnd, colCombo) so a
+  // Index every in-table fact by (element, rowCombo, periodKey, colCombo) so a
   // cell is an O(1) exact-signature lookup — no last-write-wins collisions.
   //
   // A fact that doesn't carry a slicer axis is that axis's domain total and may
@@ -723,20 +819,21 @@ export function buildPivot(
   const factIndex = new Map<string, Fact>()
   for (const f of [...tableFacts].sort((a, b) => slicerSpecificity(a) - slicerSpecificity(b))) {
     const byAxis = memberByAxis(f)
-    const end = model.periods[f.period]?.end ?? ''
+    const period = model.periods[f.period]
+    const key = period ? periodKey(period) : ''
     const rowSig = coordinate(byAxis, rowDimAxes)
     const colSig = coordinate(byAxis, colDimAxes)
-    factIndex.set(`${f.element}␟${rowSig}␟${end}␟${colSig}`, f)
+    factIndex.set(`${f.element}␟${rowSig}␟${key}␟${colSig}`, f)
   }
 
   const factfulConcepts = new Set(tableFacts.map((f) => f.element))
 
-  // The period end-date(s) a row binds against in a column. Default (and
-  // `periodEnd`) rows read the column's own end; a `periodStart` row reads the
-  // instant at the column duration's start — dated the day before the start
-  // (the XBRL/SEC convention), with the exact start date as fallback.
+  // The period keys a row binds against in a column. Default (and `periodEnd`)
+  // rows read the column's own span, then the instant at its end; a `periodStart`
+  // row reads the instant at the column duration's start — dated the day before
+  // the start (the XBRL/SEC convention), with the exact start date as fallback.
   const periodKeysFor = (col: PivotColumn, binding: 'start' | 'end' | null): string[] => {
-    if (binding !== 'start') return [col.period?.end ?? '']
+    if (binding !== 'start') return columnPeriodKeys(col.period)
     const start = col.period?.startDate
     return start ? [isoDayBefore(start), start] : []
   }
