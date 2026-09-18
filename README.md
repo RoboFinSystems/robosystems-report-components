@@ -42,7 +42,7 @@ export function Report() {
 
 - [RoboSystems Platform](https://robosystems.ai)
 - [GitHub Repository](https://github.com/RoboFinSystems/robosystems-report-components)
-- [API Documentation](https://api.robosystems.ai/docs)
+- [API Reference](https://robosystems.ai/docs/api)
 
 ## Support
 
