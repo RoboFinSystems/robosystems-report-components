@@ -10,6 +10,12 @@
  * in the payload is inert — XSS-safe — while the same-origin document stays
  * measurable so the frame auto-sizes to its content. Plain-text bodies render in
  * a `<pre>`.
+ *
+ * The frame sits on a *document surface*: the payload is authored black-on-white
+ * and the host's `--rs-*` tokens cannot reach inside an iframe, so a dark host
+ * shows it as a sheet of paper rather than recoloring it. `--rs-document-bg`,
+ * `--rs-document-padding` and `--rs-document-radius` style that surface; all
+ * three default to nothing, so a light host renders the frame flush as before.
  */
 import { marked } from 'marked'
 import type { CSSProperties } from 'react'
@@ -29,6 +35,11 @@ const styles: Record<string, CSSProperties> = {
     padding: '0.75rem 0',
   },
   link: { color: 'var(--rs-primary-700, #1d4ed8)' },
+  document: {
+    background: 'var(--rs-document-bg, transparent)',
+    padding: 'var(--rs-document-padding, 0)',
+    borderRadius: 'var(--rs-document-radius, 0)',
+  },
   frame: { width: '100%', border: 'none', display: 'block' },
   pre: {
     whiteSpace: 'pre-wrap',
@@ -120,18 +131,20 @@ function SandboxedHtml({ html, extraCss = '' }: { html: string; extraCss?: strin
   }
 
   return (
-    <iframe
-      ref={ref}
-      title="Disclosure"
-      sandbox="allow-same-origin"
-      srcDoc={wrapHtml(html, extraCss)}
-      style={styles.frame}
-      onLoad={() => {
-        fit()
-        // Re-measure shortly after in case late layout (images/fonts) grew it.
-        setTimeout(fit, 250)
-      }}
-    />
+    <div style={styles.document}>
+      <iframe
+        ref={ref}
+        title="Disclosure"
+        sandbox="allow-same-origin"
+        srcDoc={wrapHtml(html, extraCss)}
+        style={styles.frame}
+        onLoad={() => {
+          fit()
+          // Re-measure shortly after in case late layout (images/fonts) grew it.
+          setTimeout(fit, 250)
+        }}
+      />
+    </div>
   )
 }
 
