@@ -71,4 +71,17 @@ describe('InlineTextBlock — markdown conversion', () => {
     // own inline styles stay authoritative.
     expect(srcdoc).not.toContain('th, td { border:')
   })
+
+  it('frames the payload on a host-themed document surface', async () => {
+    const { InlineTextBlock } = await import('../src/components/ExternalTextBlock')
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    // Server markup keeps `var()` values verbatim; happy-dom's style parser drops them.
+    const html = renderToStaticMarkup(<InlineTextBlock html={'<p>Note.</p>'} />)
+    const surface = html.slice(0, html.indexOf('<iframe'))
+    // A dark host sets these to show the black-on-white payload as paper; unset,
+    // the surface is transparent and flush.
+    expect(surface).toContain('background:var(--rs-document-bg, transparent)')
+    expect(surface).toContain('padding:var(--rs-document-padding, 0)')
+    expect(surface).toContain('border-radius:var(--rs-document-radius, 0)')
+  })
 })
