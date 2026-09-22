@@ -47,7 +47,7 @@ export function Report() {
 ## Support
 
 - [Issues](https://github.com/RoboFinSystems/robosystems-report-components/issues)
-- [Wiki](https://github.com/RoboFinSystems/robosystems/wiki)
+- [Documentation](https://robosystems.ai/docs/technical)
 - [Projects](https://github.com/orgs/RoboFinSystems/projects)
 - [Discussions](https://github.com/orgs/RoboFinSystems/discussions)
 
