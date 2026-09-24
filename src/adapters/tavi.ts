@@ -189,6 +189,7 @@ function itemTypeOf(dataType: string | null | undefined): {
     case 'percent':
       return { itemType: 'percent', numericKind: 'percent' }
     case 'pure':
+    case 'pureType':
       return { itemType: 'pure', numericKind: 'pure' }
     case 'sharesType':
     case 'shares':
@@ -198,9 +199,26 @@ function itemTypeOf(dataType: string | null | undefined): {
     case 'long':
     case 'nonNegativeInteger':
       return { itemType: 'integer', numericKind: 'integer' }
+    // Plain decimals, and the measured quantities xbrlkit's emitter writes
+    // (xbrlr:area … volume): numbers in a unit, never text.
     case 'decimal':
     case 'float':
     case 'double':
+    case 'area':
+    case 'energy':
+    case 'flow':
+    case 'force':
+    case 'frequency':
+    case 'length':
+    case 'mass':
+    case 'memory':
+    case 'planeAngle':
+    case 'power':
+    case 'pressure':
+    case 'speed':
+    case 'temperature':
+    case 'voltage':
+    case 'volume':
       return { itemType: 'decimal' }
     case 'textBlock':
       return { itemType: 'textBlock' }
@@ -233,6 +251,19 @@ function periodOf(literal: string): PeriodInfo {
   const startDate = datePart(first)
   const endDate = inclusiveDate(second)
   return { id: literal, type: 'duration', instant: null, startDate, endDate, end: endDate }
+}
+
+/** Whether `a` states a value more precisely than `b` (`INF` is exact). */
+function morePrecise(a: string | null, b: string | null): boolean {
+  const rank = (d: string | null): number =>
+    d === null
+      ? -Infinity
+      : d === 'INF'
+        ? Infinity
+        : Number.isNaN(Number(d))
+          ? -Infinity
+          : Number(d)
+  return rank(a) > rank(b)
 }
 
 function datePart(value: string): string {
@@ -446,6 +477,10 @@ export function parseTavi(doc: string | object): NormalizedReport {
   // ── Facts ──
   const periods: Record<string, PeriodInfo> = {}
   const out: Fact[] = []
+  // A filing may tag one fact at several places in its document; TAVI keeps
+  // every occurrence, the holon keeps one. Collapse them here so a period's
+  // density (and every cell) counts a fact once, keeping the most precise.
+  const seen = new Map<string, number>()
   let registrantName: string | null = null
   for (const f of facts) {
     const dims = f.factDimensions ?? {}
@@ -492,6 +527,20 @@ export function parseTavi(doc: string | object): NormalizedReport {
       })
     }
     const factSets = presentedIn.get(element) ?? []
+    const identity = [
+      element,
+      periodLiteral,
+      unit ?? '',
+      entity ?? '',
+      dimensions.map((d) => `${d.axis}=${d.member ?? d.typedValue ?? ''}`).join('&'),
+      value ?? textValue ?? '',
+    ].join('|')
+    const earlier = seen.get(identity)
+    if (earlier !== undefined) {
+      if (morePrecise(decimals, out[earlier].decimals)) out[earlier].decimals = decimals
+      continue
+    }
+    seen.set(identity, out.length)
     out.push({
       id: f.name,
       element,

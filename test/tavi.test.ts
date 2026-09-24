@@ -418,6 +418,73 @@ describe('tavi adapter — the model', () => {
     expect(byId['rpt:f-10']).toMatchObject({ value: null, textValue: 'ACME CORP' })
   })
 
+  it('reads a ratio and a measured quantity as numbers', () => {
+    // A pure ratio carries no unit (section 8.5.2.3), so the datatype alone has
+    // to say the value is a number; so do the measured-quantity datatypes.
+    const doc = structuredClone(DOC)
+    const model = doc.xbrlModel as unknown as { concepts: unknown[]; facts: unknown[] }
+    model.concepts.push(
+      {
+        name: 'us-gaap:TierOneRiskBasedCapitalToRiskWeightedAssets',
+        dataType: 'xbrlr:pureType',
+        periodType: 'instant',
+      },
+      {
+        name: 'us-gaap:AreaOfRealEstateProperty',
+        dataType: 'xbrlr:area',
+        periodType: 'instant',
+      }
+    )
+    model.facts.push(
+      {
+        name: 'rpt:f-ratio',
+        factDimensions: {
+          'xbrl:concept': 'us-gaap:TierOneRiskBasedCapitalToRiskWeightedAssets',
+          'xbrl:period': '2025-01-01T00:00:00',
+          'xbrl:entity': 'rpt:cik-0000000001',
+        },
+        factValues: [{ value: '0.155', decimals: 3 }],
+      },
+      {
+        name: 'rpt:f-area',
+        factDimensions: {
+          'xbrl:concept': 'us-gaap:AreaOfRealEstateProperty',
+          'xbrl:period': '2025-01-01T00:00:00',
+          'xbrl:entity': 'rpt:cik-0000000001',
+          'xbrl:unit': 'utr:sqft',
+        },
+        factValues: [{ value: '120000' }],
+      }
+    )
+    const byId = Object.fromEntries(parseTavi(doc).facts.map((f) => [f.id, f]))
+    expect(byId['rpt:f-ratio']).toMatchObject({ value: 0.155, textValue: null, unit: null })
+    expect(byId['rpt:f-area']).toMatchObject({ value: 120000, textValue: null })
+  })
+
+  it('counts a fact tagged at several places once, keeping the most precise', () => {
+    // TAVI keeps every occurrence of a fact; left in, the copies inflate a
+    // period's density and prune real single-fact columns beside it.
+    const doc = structuredClone(DOC)
+    const facts = doc.xbrlModel.facts as unknown as {
+      name: string
+      factValues: Record<string, unknown>[]
+    }[]
+    const original = facts.find((f) => f.name === 'rpt:f-1')!
+    facts.push(
+      { ...structuredClone(original), name: 'rpt:f-1-again' },
+      {
+        ...structuredClone(original),
+        name: 'rpt:f-1-exact',
+        factValues: [{ ...original.factValues[0], decimals: 'INF' }],
+      }
+    )
+    const copies = parseTavi(doc).facts.filter((f) =>
+      ['rpt:f-1', 'rpt:f-1-again', 'rpt:f-1-exact'].includes(f.id)
+    )
+    expect(copies.map((f) => f.id)).toEqual(['rpt:f-1'])
+    expect(copies[0].decimals).toBe('INF')
+  })
+
   it('reads explicit and typed dimensions with their labels', () => {
     const byId = Object.fromEntries(r.facts.map((f) => [f.id, f]))
     expect(byId['rpt:f-5'].dimensions).toEqual([
