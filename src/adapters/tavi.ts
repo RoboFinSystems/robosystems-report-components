@@ -93,6 +93,7 @@ interface TaviFactValue {
 interface TaviFact extends TaviNamed {
   factDimensions?: Record<string, unknown>
   factValues?: TaviFactValue[]
+  properties?: TaviProperty[]
 }
 interface TaviModel {
   name?: string
@@ -136,6 +137,12 @@ const CORE_ASPECTS = new Set([
 ])
 const STANDARD_LABEL = 'xbrl:label'
 const REGISTRANT_NAME = 'dei:EntityRegistrantName'
+/**
+ * The groups (report sections) a fact belongs to, space-separated. The draft's
+ * group contents name networks and cubes but not facts, so xbrlkit states each
+ * fact's sections in this declared property; without it they are inferred.
+ */
+const SECTIONS_PROPERTY = 'rs:groups'
 
 /** Whether a parsed document is a Tavi model (a `documentInfo.documentType` under xbrl.org, or an `xbrlModel` report). */
 export function isTaviDocument(doc: unknown): doc is TaviDocument {
@@ -391,6 +398,8 @@ export function parseTavi(doc: string | object): NormalizedReport {
   const presentedIn = new Map<string, string[]>()
   /** group → its first presentation network (the structure a calc network attaches to) */
   const presentationOfGroup = new Map<string, string>()
+  /** group → every presentation network in it (the sections a stated group names) */
+  const presentationsOfGroup = new Map<string, string[]>()
 
   const sectionMeta = (groupName: string | undefined) => {
     const group = groupName ? groups.get(groupName) : undefined
@@ -417,6 +426,8 @@ export function parseTavi(doc: string | object): NormalizedReport {
     const groupName = groupOf.get(n.name)
     const meta = sectionMeta(groupName)
     if (groupName && !presentationOfGroup.has(groupName)) presentationOfGroup.set(groupName, n.name)
+    if (groupName)
+      presentationsOfGroup.set(groupName, [...(presentationsOfGroup.get(groupName) ?? []), n.name])
     structures.push({
       id: n.name,
       blockType: '',
@@ -526,7 +537,14 @@ export function parseTavi(doc: string | object): NormalizedReport {
         typedValue,
       })
     }
-    const factSets = presentedIn.get(element) ?? []
+    const stated = propertyValue(f.properties, SECTIONS_PROPERTY)
+    const factSets =
+      typeof stated === 'string'
+        ? stated
+            .split(/\s+/)
+            .filter(Boolean)
+            .flatMap((group) => presentationsOfGroup.get(group) ?? [])
+        : (presentedIn.get(element) ?? [])
     const identity = [
       element,
       periodLiteral,

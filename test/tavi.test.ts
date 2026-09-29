@@ -551,6 +551,24 @@ describe('tavi adapter — the model', () => {
     expect(eps?.factSet).toBeNull()
   })
 
+  it('takes the sections a fact states over inferring them', () => {
+    // xbrlkit writes each fact's sections as `rs:groups`: f-1 presents in both
+    // sections by concept, but states only the Revenue (Details) group.
+    const stated = structuredClone(DOC)
+    const facts = stated.xbrlModel.facts as Array<Record<string, unknown>>
+    facts[0].properties = [{ property: 'rs:groups', value: 'rpt:group-1' }]
+    facts[1].properties = [{ property: 'rs:groups', value: 'rpt:group-9' }]
+    const parsed = parseTavi(stated)
+    const first = parsed.facts.find((f) => f.id === 'rpt:f-1')
+    expect(first?.factSets).toEqual(['rpt:network-presentation-2'])
+    expect(first?.factSet).toBe('rpt:network-presentation-2')
+    // A group the model does not have places the fact nowhere, rather than
+    // falling back to a rule the producer overrode.
+    expect(parsed.facts.find((f) => f.id === 'rpt:f-2')?.factSet).toBeNull()
+    // A fact that states nothing is still placed by its concept.
+    expect(parsed.facts.find((f) => f.id === 'rpt:f-7')?.factSet).toBeNull()
+  })
+
   it('reads presentation arcs with their preferred labels, and calculation arcs with their weights', () => {
     const total = r.presAssociations.find(
       (a) => a.child === 'us-gaap:Assets' && a.structure === 'rpt:network-presentation-0'
