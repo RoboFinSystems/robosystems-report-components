@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     # 22 is the oldest Node still in support; 24 is the LTS the consuming
