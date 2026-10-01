@@ -15,7 +15,7 @@ on:
 
 jobs:
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Pushes the version commit to main and to the release branch. Falls back
     # to github.token when ACTIONS_TOKEN is absent, so the job needs write.
     permissions:
@@ -135,7 +135,7 @@ jobs:
   create-summary:
     needs: [create-release, create-tag]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Writes to $GITHUB_STEP_SUMMARY only; touches nothing in the repo.
     permissions:
       contents: read
