@@ -569,6 +569,30 @@ describe('tavi adapter — the model', () => {
     expect(parsed.facts.find((f) => f.id === 'rpt:f-7')?.factSet).toBeNull()
   })
 
+  it("takes the draft's own fact location, one group per fact", () => {
+    // xbrlkit writes `xbrl:factLocation` (section 14.3.7) for a fact that
+    // sits in exactly one section; it names a group, like `rs:groups`.
+    const stated = structuredClone(DOC)
+    const facts = stated.xbrlModel.facts as Array<Record<string, unknown>>
+    facts[0].properties = [{ property: 'xbrl:factLocation', value: 'rpt:group-1' }]
+    const parsed = parseTavi(stated)
+    const first = parsed.facts.find((f) => f.id === 'rpt:f-1')
+    expect(first?.factSets).toEqual(['rpt:network-presentation-2'])
+    expect(first?.factSet).toBe('rpt:network-presentation-2')
+  })
+
+  it('reads the groups set with either delimiter', () => {
+    // The draft's JSON collection delimiter is a comma (section 11.2.2);
+    // documents written before xbrlkit 0.21 used a space.
+    for (const value of ['rpt:group-0,rpt:group-1', 'rpt:group-0 rpt:group-1']) {
+      const stated = structuredClone(DOC)
+      const facts = stated.xbrlModel.facts as Array<Record<string, unknown>>
+      facts[0].properties = [{ property: 'rs:groups', value }]
+      const first = parseTavi(stated).facts.find((f) => f.id === 'rpt:f-1')
+      expect(first?.factSets).toEqual(['rpt:network-presentation-0', 'rpt:network-presentation-2'])
+    }
+  })
+
   it('reads presentation arcs with their preferred labels, and calculation arcs with their weights', () => {
     const total = r.presAssociations.find(
       (a) => a.child === 'us-gaap:Assets' && a.structure === 'rpt:network-presentation-0'
