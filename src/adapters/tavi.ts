@@ -138,10 +138,14 @@ const CORE_ASPECTS = new Set([
 const STANDARD_LABEL = 'xbrl:label'
 const REGISTRANT_NAME = 'dei:EntityRegistrantName'
 /**
- * The groups (report sections) a fact belongs to, space-separated. The draft's
- * group contents name networks and cubes but not facts, so xbrlkit states each
- * fact's sections in this declared property; without it they are inferred.
+ * Where a fact sits in the report. The draft's core `xbrl:factLocation`
+ * (section 14.3.7) names one group per fact, so a fact in exactly one section
+ * carries it. A fact in more carries `rs:groups`, xbrlkit's QName set of the
+ * groups, comma-delimited as the draft's JSON collections are (section 11.2.2);
+ * older documents wrote it space-separated. Without either, sections are
+ * inferred from the presentation.
  */
+const LOCATION_PROPERTY = 'xbrl:factLocation'
 const SECTIONS_PROPERTY = 'rs:groups'
 
 /** Whether a parsed document is a Tavi model (a `documentInfo.documentType` under xbrl.org, or an `xbrlModel` report). */
@@ -537,14 +541,17 @@ export function parseTavi(doc: string | object): NormalizedReport {
         typedValue,
       })
     }
+    const located = propertyValue(f.properties, LOCATION_PROPERTY)
     const stated = propertyValue(f.properties, SECTIONS_PROPERTY)
-    const factSets =
-      typeof stated === 'string'
-        ? stated
-            .split(/\s+/)
-            .filter(Boolean)
-            .flatMap((group) => presentationsOfGroup.get(group) ?? [])
-        : (presentedIn.get(element) ?? [])
+    const statedGroups =
+      typeof located === 'string'
+        ? [located]
+        : typeof stated === 'string'
+          ? stated.split(/[\s,]+/).filter(Boolean)
+          : null
+    const factSets = statedGroups
+      ? statedGroups.flatMap((group) => presentationsOfGroup.get(group) ?? [])
+      : (presentedIn.get(element) ?? [])
     const identity = [
       element,
       periodLiteral,
