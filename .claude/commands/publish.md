@@ -7,11 +7,13 @@ Monitor a release and publish run — pinpoint why it failed, and confirm the ve
 
 ## How a release actually happens here
 
-1. **`create-release.yml`** (manual dispatch with `major|minor|patch`, or `npm run release:create [type]`) — bumps the version on `main`, creates `release/<version>`, and checks it out locally when run via the script.
-2. **`tag-release.yml`** — tags it and cuts the GitHub Release.
-3. **`publish.yml`** — triggered by **a push to `release/**`**, not by a merge and not by the tag. Runs `npm publish --provenance`.
+One workflow, `create-release.yml` (manual dispatch with `major|minor|patch`, or `npm run release:create [type]`), with three jobs in sequence:
 
-So **merging a PR to `main` publishes nothing** — the release-branch push is the publishing event.
+1. **`create-release`** — bumps the version on `main` and creates `release/<version>` (the script also checks it out locally).
+2. **`create-tag`** — `tag-release.yml` tags it and cuts the GitHub Release.
+3. **`publish`** — runs once the tag exists, under the `production` environment, so its required-reviewer prompt lands on this same run. Checks out the tag, verifies the version is the one just cut, builds, and runs `npm publish --provenance`. npm's trusted publisher is registered against `create-release.yml` and the `production` environment.
+
+So **merging a PR to `main` publishes nothing** — dispatching the workflow is the publishing event, and nothing uploads until the deployment is approved on the run page. A failed publish is retried with **Re-run failed jobs** on that run; the version and tag are already cut, and a new release is warranted only when the code itself is at fault.
 
 **Curated release notes are supported here.** `tag-release.yml` auto-generates a changelog from changes since the last tag via the Claude API, but if `.github/release-notes/v<version>.md` exists **at the tagged ref**, it replaces the generated changelog and the stats section is skipped. The file must be committed to `main` _before_ dispatching `create-release.yml` — see `/release-notes`, and note there is no window to add it afterwards.
 
@@ -25,7 +27,6 @@ So **merging a PR to `main` publishes nothing** — the release-branch push is t
 ## 1. Find the run
 
 ```bash
-gh run list --workflow=publish.yml --limit 5
 gh run list --workflow=create-release.yml --limit 5
 gh run view <run-id>
 gh run watch <run-id>            # live, if in flight
@@ -40,9 +41,11 @@ gh run view <run-id> --log-failed
 - **`create-release.yml` — branch already exists.** A previous run got partway; resolve the leftover `release/<version>` branch rather than re-dispatching blindly.
 - **`create-release.yml` — push to `main` rejected.** The bump commits to a protected branch; a permissions failure shows at the push step.
 - **`tag-release.yml` — changelog step.** A failed Claude API call falls back to a mechanical summary rather than failing the run. Notes that read like a commit tally usually mean the fallback fired — or that a curated file was expected and wasn't found at the tagged ref.
-- **`publish.yml` — build.** `tsup` over two entries. This is where packaging breaks surface.
-- **`publish.yml` — the upload.** `npm publish --provenance` over OIDC. Failures are usually npm-side trust configuration or a name/version mismatch, not code.
-- **Version already on npm.** The publish refuses rather than overwriting. If you expected one, the version wasn't bumped.
+- **`publish` — waiting.** The job is paused on the `production` environment's required reviewer. Nothing is wrong; approve it from the run page (_Review deployments_).
+- **`publish` — "checked out version X, expected Y".** The tag the job checked out does not carry the version this run cut. Nothing was published; look at what `create-tag` tagged.
+- **`publish` — build.** `tsup` over two entries. This is where packaging breaks surface.
+- **`publish` — the upload.** `npm publish --provenance` over OIDC. Failures are usually npm-side trust configuration (the publisher must name `create-release.yml`) or a name/version mismatch, not code.
+- **Version already on npm.** Every later step is skipped rather than overwriting. If you expected a publish, the version wasn't bumped.
 
 ## 3. Verify it actually landed
 
@@ -76,6 +79,6 @@ cd ../roboledger-app && npm install @robosystems/report-components@<version> && 
 
 ## Output
 
-A short status: which workflow, what failed and at which step, the root cause, the re-run link if any, the verified published version, whether both entries load under Node ESM, and whether the notes that shipped were curated or generated. If nothing failed, say so — don't manufacture work.
+A short status: which job, what failed and at which step, the root cause, the re-run link if any, the verified published version, whether both entries load under Node ESM, and whether the notes that shipped were curated or generated. If nothing failed, say so — don't manufacture work.
 
 $ARGUMENTS

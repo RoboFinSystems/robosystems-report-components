@@ -11,7 +11,7 @@ A PR description written from the diff alone can't know _why_ a change was made,
 
 This is `@robosystems/report-components` — a **published, source-agnostic React library** for rendering XBRL-grade financial statements, consumed in production by `roboledger-app` and `xbrlkit-viewer`. It is pre-1.0, but the exported surface is a real API contract: a symbol re-exported from `src/index.ts` or `src/adapters/index.ts` is downstream API, and renames or removals are breaking regardless of the version number.
 
-**This repository is public.** The PR title and body are world-readable the moment they're pushed, and publishing is triggered by a push to `release/**` rather than by a merge — so the text is often public before the version that carries it.
+**This repository is public.** The PR title and body are world-readable the moment they're pushed, and publishing happens only when a release is dispatched rather than on merge — so the text is often public before the version that carries it.
 
 ## Instructions
 
@@ -23,7 +23,7 @@ TARGET=${1:-main}            # override target via the first argument
 ```
 
 - **Never PR from the default branch.** If `CURRENT` is `main`, stop. Branches are created with `npm run feature:create <type> <name>`, never `git switch -c`.
-- **Never target a release branch.** `release/**` is what `publish.yml` watches; a PR into one is a publish trigger, not a review. Target `main`.
+- **Never target a release branch.** `release/<version>` is a cut record that `create-release.yml` tags and publishes from; a PR into one changes nothing on `main` and is not a review. Target `main`.
 - **Source ≠ target.** If `CURRENT == TARGET`, stop.
 - **Uncommitted changes.** `git status --porcelain` — surface them and ask whether to commit (never on `main`, stage by name, no `git add -A`) or proceed without. The description must reflect committed state.
 - **Existing PR.** `gh pr list --head "$CURRENT" --base "$TARGET" --json url,number` — don't duplicate; offer `gh pr edit`.
