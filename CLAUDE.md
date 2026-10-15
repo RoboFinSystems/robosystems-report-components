@@ -62,9 +62,9 @@ under CI. Never bypass them with `--no-verify`.
 ## Release & Publish
 
 - `create-release.yml` (manual dispatch, `major|minor|patch`) bumps the version on `main`, creates
-  `release/<version>`, then `tag-release.yml` tags it and cuts the GitHub release; pushing
-  `release/**` triggers `publish.yml` → `npm publish --provenance`. `npm run release:create [type]`
-  dispatches that workflow and checks the branch out locally.
+  `release/<version>`, then `tag-release.yml` tags it and cuts the GitHub release, and a `publish`
+  job in the same run (gated by the `production` environment) runs `npm publish --provenance` from
+  the tag. `npm run release:create [type]` dispatches that workflow and checks the branch out locally.
 - **Release notes**: `tag-release.yml` auto-generates the changelog from changes since the last tag
   (via the Claude API). For milestone releases, commit curated notes to
   `.github/release-notes/v<version>.md` _before_ dispatching `create-release.yml` — when that file
