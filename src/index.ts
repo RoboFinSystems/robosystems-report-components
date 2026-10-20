@@ -21,6 +21,7 @@ export {
   qname,
   stripRoleSuffix,
 } from './constants'
+export { pivotToCsv } from './csv'
 export * from './format'
 export * from './model'
 export {
