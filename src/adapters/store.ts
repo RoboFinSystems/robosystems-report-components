@@ -18,6 +18,15 @@ import type {
   Fact,
   FactProvenance,
   InformationBlock,
+  Lineage,
+  LineageAccount,
+  LineageAgent,
+  LineageContribution,
+  LineageEntity,
+  LineageEntry,
+  LineageEvent,
+  LineageLine,
+  LineageTransaction,
   NormalizedReport,
   NumericKind,
   PeriodInfo,
@@ -192,6 +201,10 @@ export function parseStore(store: Store): NormalizedReport {
       firstValue(id, IRI.contentHash),
       firstValue(id, IRI.wasAttributedTo)
     )
+    // The bridge into `#lineage`, present only on a file downloaded with it.
+    const derivedFrom = objects(id, IRI.wasDerivedFrom)
+      .map((o) => o.value)
+      .sort()
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
@@ -206,6 +219,7 @@ export function parseStore(store: Store): NormalizedReport {
       decimals: firstValue(id, IRI.decimals),
       dimensions: dimensions.length ? dimensions : undefined,
       ...(provenance ? { provenance } : {}),
+      ...(derivedFrom.length ? { derivedFrom } : {}),
     })
   }
 
@@ -306,6 +320,8 @@ export function parseStore(store: Store): NormalizedReport {
   }
   const reportId = reportIri ? (reportIri.split('/').pop() ?? null) : null
 
+  const lineage = readLineage(store, entity)
+
   return {
     reportId,
     reportIri,
@@ -318,5 +334,148 @@ export function parseStore(store: Store): NormalizedReport {
     units,
     calcAssociations,
     presAssociations,
+    ...(lineage ? { lineage } : {}),
   }
+}
+
+/**
+ * The `#lineage` graph, when the file carries it: the ledger rows behind the
+ * frozen figures, typed. Absent (not empty) on a plain holon, so a renderer can
+ * tell "no lineage in this file" from "no lines behind this figure".
+ */
+function readLineage(store: Store, entity: EntityInfo | null): Lineage | undefined {
+  const { objects, firstValue, subjectsOfType } = makeReaders(store)
+  const num = (s: string, p: string): number | null => toNumber(firstValue(s, p))
+  const list = (s: string, p: string): string[] => objects(s, p).map((o) => o.value)
+
+  const contributions: Record<string, LineageContribution> = {}
+  for (const id of subjectsOfType(IRI.Contribution)) {
+    contributions[id] = {
+      id,
+      fact: firstValue(id, IRI.substantiates) ?? '',
+      entity: firstValue(id, IRI.entity) ?? '',
+      account: firstValue(id, IRI.account) ?? '',
+      amount: num(id, IRI.amount),
+      frozenAt: firstValue(id, IRI.frozenAt),
+      windowStart: firstValue(id, IRI.windowStart),
+      windowEnd: firstValue(id, IRI.windowEnd),
+      lineCount: num(id, IRI.lineCount) ?? 0,
+      describedLineCount: num(id, IRI.describedLineCount) ?? 0,
+      describedFrom: firstValue(id, IRI.describedFrom),
+      priorLineCount: num(id, IRI.priorLineCount) ?? 0,
+      priorBalance: num(id, IRI.priorBalance),
+      members: list(id, IRI.hadMember).sort(),
+    }
+  }
+  if (!Object.keys(contributions).length) return undefined
+
+  const lines: Record<string, LineageLine> = {}
+  for (const id of subjectsOfType(IRI.LineItem)) {
+    lines[id] = {
+      id,
+      entry: firstValue(id, IRI.entry) ?? '',
+      account: firstValue(id, IRI.account) ?? '',
+      entity: firstValue(id, IRI.entity),
+      debit: num(id, IRI.debit),
+      credit: num(id, IRI.credit),
+      lineOrder: num(id, IRI.lineOrder),
+      description: firstValue(id, IRI.lineDescription),
+      flowConcept: firstValue(id, IRI.flowConcept),
+      dimensionMembers: list(id, IRI.dimensionMember).sort(),
+      event: firstValue(id, IRI.wasGeneratedBy),
+    }
+  }
+  const entries: Record<string, LineageEntry> = {}
+  for (const id of subjectsOfType(IRI.Entry)) {
+    entries[id] = {
+      id,
+      entity: firstValue(id, IRI.entity),
+      number: firstValue(id, IRI.entryNumber),
+      postingDate: firstValue(id, IRI.postingDate),
+      postedAt: firstValue(id, IRI.postedAt),
+      type: firstValue(id, IRI.entryType),
+      status: firstValue(id, IRI.entryStatus),
+      recordedBy: firstValue(id, IRI.recordedBy),
+      memo: firstValue(id, IRI.memo),
+      transaction: firstValue(id, IRI.transaction),
+      event: firstValue(id, IRI.wasGeneratedBy),
+      reversalOf: firstValue(id, IRI.reversalOf),
+      reversedBy: firstValue(id, IRI.reversedBy),
+      adjustmentKind: firstValue(id, IRI.adjustmentKind),
+      adjustsEntity: firstValue(id, IRI.adjustsEntity),
+    }
+  }
+  const transactions: Record<string, LineageTransaction> = {}
+  for (const id of subjectsOfType(IRI.Transaction)) {
+    transactions[id] = {
+      id,
+      entity: firstValue(id, IRI.entity),
+      type: firstValue(id, IRI.transactionType),
+      category: firstValue(id, IRI.category),
+      amount: num(id, IRI.amount),
+      currency: firstValue(id, IRI.currency),
+      date: firstValue(id, IRI.transactionDate),
+      dueDate: firstValue(id, IRI.dueDate),
+      merchantName: firstValue(id, IRI.merchantName),
+      referenceNumber: firstValue(id, IRI.referenceNumber),
+      description: firstValue(id, IRI.comment),
+      source: firstValue(id, IRI.source),
+      event: firstValue(id, IRI.wasGeneratedBy),
+    }
+  }
+  const events: Record<string, LineageEvent> = {}
+  for (const id of subjectsOfType(IRI.Event)) {
+    events[id] = {
+      id,
+      entity: firstValue(id, IRI.entity),
+      type: firstValue(id, IRI.eventType),
+      category: firstValue(id, IRI.eventCategory),
+      eventClass: firstValue(id, IRI.eventClass),
+      action: firstValue(id, IRI.eventAction),
+      status: firstValue(id, IRI.eventStatus),
+      occurredAt: firstValue(id, IRI.occurredAt),
+      dueDate: firstValue(id, IRI.dueDate),
+      amount: num(id, IRI.amount),
+      currency: firstValue(id, IRI.currency),
+      source: firstValue(id, IRI.source),
+      description: firstValue(id, IRI.comment),
+      agent: firstValue(id, IRI.wasAssociatedWith),
+      obligatedBy: firstValue(id, IRI.obligatedBy),
+      discharges: firstValue(id, IRI.discharges),
+      replaces: firstValue(id, IRI.replaces),
+    }
+  }
+  const agents: Record<string, LineageAgent> = {}
+  for (const id of subjectsOfType(IRI.Agent)) {
+    agents[id] = {
+      id,
+      name: firstValue(id, IRI.prefLabel) ?? humanize(id),
+      type: firstValue(id, IRI.agentType),
+    }
+  }
+  const accounts: Record<string, LineageAccount> = {}
+  for (const id of subjectsOfType(IRI.Account)) {
+    const balance = firstValue(id, IRI.balance)
+    const periodType = firstValue(id, IRI.periodType)
+    accounts[id] = {
+      id,
+      name: firstValue(id, IRI.prefLabel) ?? humanize(id),
+      code: firstValue(id, IRI.code),
+      balance: balance === 'debit' || balance === 'credit' ? balance : null,
+      periodType: periodType === 'instant' || periodType === 'duration' ? periodType : null,
+    }
+  }
+  const entities: Record<string, LineageEntity> = {}
+  for (const id of subjectsOfType(IRI.LedgerEntity)) {
+    // The report's own entity is labelled in #scene, not restated here.
+    const own = entity && entity.id === id ? entity.name : null
+    entities[id] = {
+      id,
+      name: firstValue(id, IRI.prefLabel) ?? own,
+      role: firstValue(id, IRI.entityRole),
+      parent: firstValue(id, IRI.parentEntity),
+    }
+  }
+
+  return { contributions, lines, entries, transactions, events, agents, accounts, entities }
 }

@@ -23,6 +23,7 @@ export {
 } from './constants'
 export { pivotToCsv } from './csv'
 export * from './format'
+export * from './lineage'
 export * from './model'
 export {
   buildPivot,
@@ -40,6 +41,8 @@ export { ExternalTextBlock } from './components/ExternalTextBlock'
 export type { ExternalTextBlockProps } from './components/ExternalTextBlock'
 export { FactInspector } from './components/FactInspector'
 export type { FactInspectorProps } from './components/FactInspector'
+export { LineageWalk } from './components/LineageWalk'
+export type { LineageWalkProps } from './components/LineageWalk'
 export { ReportView } from './components/ReportView'
 export type { ReportViewProps } from './components/ReportView'
 export { StatementTable } from './components/StatementTable'

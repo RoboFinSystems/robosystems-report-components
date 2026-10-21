@@ -172,6 +172,158 @@ export interface Fact {
   dimensions?: DimensionQualifier[]
   /** How the fact was made, when the report says. Absent on a filing. */
   provenance?: FactProvenance | null
+  /**
+   * The contributions (by id, see `Lineage`) the figure was derived from, when
+   * the file carries its `#lineage` graph. Absent on a plain holon and on
+   * every figure that was not pivoted from the ledger.
+   */
+  derivedFrom?: string[]
+}
+
+// ── Lineage: the ledger behind a report's frozen figures ─────────────────────
+//
+// A holon downloaded "with lineage" carries a fourth named graph: for every
+// figure that was summed from the ledger, one contribution per account the
+// pivot summed, each listing every line under that account in the figure's
+// window by IRI, and a description of the lines inside the report's own span
+// (their entry, transaction, event and counterparty). The member list is
+// complete so the figure's `contentHash` can be recomputed from the file; the
+// description is bounded, and a contribution reaching further back states the
+// balance of what it leaves undescribed.
+
+/** One account's share of a figure: the lines the pivot summed under it. */
+export interface LineageContribution {
+  id: string
+  /** The fact it substantiates. */
+  fact: string
+  /** The entity whose pivot summed the account (a member of the group, on a consolidated figure). */
+  entity: string
+  account: string
+  /** The account's share of the figure, in its natural sign. */
+  amount: number | null
+  frozenAt: string | null
+  windowStart: string | null
+  windowEnd: string | null
+  /** Every landed line under the account in the window. */
+  lineCount: number
+  /** Of those, the lines described in the file. */
+  describedLineCount: number
+  /** When set, lines before this date are members but not described … */
+  describedFrom: string | null
+  /** … and this is how many there are, and what they net to. */
+  priorLineCount: number
+  priorBalance: number | null
+  /** Every member line, by IRI, described or not; sorted. */
+  members: string[]
+}
+
+export interface LineageLine {
+  id: string
+  entry: string
+  account: string
+  entity: string | null
+  debit: number | null
+  credit: number | null
+  lineOrder: number | null
+  description: string | null
+  /** The cash-flow concept the line carried as of the freeze, as a qname. */
+  flowConcept: string | null
+  dimensionMembers: string[]
+  /** The event the line's entry was posted from. */
+  event: string | null
+}
+
+export interface LineageEntry {
+  id: string
+  entity: string | null
+  number: string | null
+  postingDate: string | null
+  postedAt: string | null
+  type: string | null
+  /** `posted` or `reversed`: both halves of a reversal are in the books. */
+  status: string | null
+  /** How it was recorded: `manual_entry`, `source_sync`, `schedule_derived`, … */
+  recordedBy: string | null
+  memo: string | null
+  transaction: string | null
+  event: string | null
+  reversalOf: string | null
+  reversedBy: string | null
+  /** On a consolidating entry: `elimination_intercompany`, `nci_allocation`, … */
+  adjustmentKind: string | null
+  adjustsEntity: string | null
+}
+
+export interface LineageTransaction {
+  id: string
+  entity: string | null
+  type: string | null
+  category: string | null
+  amount: number | null
+  currency: string | null
+  date: string | null
+  dueDate: string | null
+  merchantName: string | null
+  referenceNumber: string | null
+  description: string | null
+  source: string | null
+  event: string | null
+}
+
+export interface LineageEvent {
+  id: string
+  entity: string | null
+  type: string | null
+  category: string | null
+  eventClass: string | null
+  action: string | null
+  status: string | null
+  occurredAt: string | null
+  dueDate: string | null
+  amount: number | null
+  currency: string | null
+  source: string | null
+  description: string | null
+  /** The counterparty. */
+  agent: string | null
+  obligatedBy: string | null
+  discharges: string | null
+  replaces: string | null
+}
+
+export interface LineageAgent {
+  id: string
+  name: string
+  type: string | null
+}
+
+/** A chart-of-accounts account — distinct from the concepts the report is presented in. */
+export interface LineageAccount {
+  id: string
+  name: string
+  code: string | null
+  balance: BalanceType | null
+  periodType: PeriodType | null
+}
+
+/** A member of the reporting group; the report's own entity is `NormalizedReport.entity`. */
+export interface LineageEntity {
+  id: string
+  name: string | null
+  /** `operating` or `consolidation`. */
+  role: string | null
+  parent: string | null
+}
+
+export interface Lineage {
+  contributions: Record<string, LineageContribution>
+  lines: Record<string, LineageLine>
+  entries: Record<string, LineageEntry>
+  transactions: Record<string, LineageTransaction>
+  events: Record<string, LineageEvent>
+  agents: Record<string, LineageAgent>
+  accounts: Record<string, LineageAccount>
+  entities: Record<string, LineageEntity>
 }
 
 /** A calculation arc: `parent` (subtotal) rolls up `child * weight`. */
@@ -245,6 +397,8 @@ export interface NormalizedReport {
   units: Record<string, UnitInfo>
   calcAssociations: CalcAssociation[]
   presAssociations: PresAssociation[]
+  /** The ledger behind the frozen figures, when the file carries its `#lineage` graph. */
+  lineage?: Lineage
 }
 
 // ── Rendered statement model (produced by project.ts) ────────────────────────
