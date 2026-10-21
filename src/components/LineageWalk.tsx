@@ -58,7 +58,8 @@ const styles: Record<string, CSSProperties> = {
   entityName: { color: 'var(--rs-muted, #6b7280)', fontSize: '0.75rem' },
   mono: { fontFamily: 'var(--rs-font-mono, ui-monospace, monospace)' },
   summary: { fontSize: '0.75rem', color: 'var(--rs-muted, #6b7280)', margin: '0.15rem 0 0.35rem' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' },
+  scroll: { overflowX: 'auto' },
+  table: { width: '100%', minWidth: '24rem', borderCollapse: 'collapse', fontSize: '0.78rem' },
   th: {
     textAlign: 'left',
     fontWeight: 500,
@@ -235,75 +236,79 @@ function Contribution({
           ? `, ${contribution.describedLineCount} shown from ${formatDate(contribution.describedFrom)}`
           : ''}
       </div>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Date</th>
-            <th style={styles.th}>Entry</th>
-            <th style={styles.th}>Description</th>
-            <th style={{ ...styles.th, textAlign: 'right' }}>Debit</th>
-            <th style={{ ...styles.th, textAlign: 'right' }}>Credit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contribution.describedFrom && contribution.priorLineCount > 0 ? (
+      <div style={styles.scroll}>
+        <table style={styles.table}>
+          <thead>
             <tr>
-              <td style={{ ...styles.td, ...styles.prior }} colSpan={3}>
-                Balance at {formatDate(dayBefore(contribution.describedFrom))} ·{' '}
-                {contribution.priorLineCount} earlier{' '}
-                {contribution.priorLineCount === 1 ? 'line' : 'lines'}
-              </td>
-              <td style={{ ...styles.td, ...styles.num, ...styles.prior }} colSpan={2}>
-                {money(contribution.priorBalance, symbol)}
-              </td>
+              <th style={styles.th}>Date</th>
+              <th style={styles.th}>Entry</th>
+              <th style={styles.th}>Description</th>
+              <th style={{ ...styles.th, textAlign: 'right' }}>Debit</th>
+              <th style={{ ...styles.th, textAlign: 'right' }}>Credit</th>
             </tr>
-          ) : null}
-          {lines.map((line) => {
-            const entry = lineage.entries[line.entry]
-            const event = line.event ? lineage.events[line.event] : undefined
-            const agent = event?.agent ? lineage.agents[event.agent] : undefined
-            const isOpen = open.has(line.id)
-            const description =
-              entry?.memo ?? line.description ?? eventWords(event?.type) ?? entry?.type ?? ''
-            return [
-              <tr
-                key={line.id}
-                style={styles.rowButton}
-                onClick={() => onToggle(line.id)}
-                aria-expanded={isOpen}
-                data-testid="lineage-line"
-              >
-                <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
-                  {formatDate(entry?.postingDate)}
+          </thead>
+          <tbody>
+            {contribution.describedFrom && contribution.priorLineCount > 0 ? (
+              <tr>
+                <td style={{ ...styles.td, ...styles.prior }} colSpan={3}>
+                  Balance at {formatDate(dayBefore(contribution.describedFrom))} ·{' '}
+                  {contribution.priorLineCount} earlier{' '}
+                  {contribution.priorLineCount === 1 ? 'line' : 'lines'}
                 </td>
-                <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{entry?.number ?? '—'}</td>
-                <td style={styles.td}>
-                  {description}
-                  {agent ? <span style={styles.key}> · {agent.name}</span> : null}
-                  {entry?.adjustmentKind ? (
-                    <span style={styles.badge}>{adjustmentWords(entry.adjustmentKind)}</span>
-                  ) : null}
-                  {entry?.status === 'reversed' ? <span style={styles.badge}>reversed</span> : null}
-                  {entry?.reversalOf ? <span style={styles.badge}>reversal</span> : null}
+                <td style={{ ...styles.td, ...styles.num, ...styles.prior }} colSpan={2}>
+                  {money(contribution.priorBalance, symbol)}
                 </td>
-                <td style={{ ...styles.td, ...styles.num }}>
-                  {line.debit !== null ? money(line.debit, symbol) : ''}
-                </td>
-                <td style={{ ...styles.td, ...styles.num }}>
-                  {line.credit !== null ? money(line.credit, symbol) : ''}
-                </td>
-              </tr>,
-              isOpen ? (
-                <tr key={`${line.id}-detail`}>
-                  <td style={{ padding: 0 }} colSpan={5}>
-                    <LineDetail lineage={lineage} line={line} symbol={symbol} />
+              </tr>
+            ) : null}
+            {lines.map((line) => {
+              const entry = lineage.entries[line.entry]
+              const event = line.event ? lineage.events[line.event] : undefined
+              const agent = event?.agent ? lineage.agents[event.agent] : undefined
+              const isOpen = open.has(line.id)
+              const description =
+                entry?.memo ?? line.description ?? eventWords(event?.type) ?? entry?.type ?? ''
+              return [
+                <tr
+                  key={line.id}
+                  style={styles.rowButton}
+                  onClick={() => onToggle(line.id)}
+                  aria-expanded={isOpen}
+                  data-testid="lineage-line"
+                >
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                    {formatDate(entry?.postingDate)}
                   </td>
-                </tr>
-              ) : null,
-            ]
-          })}
-        </tbody>
-      </table>
+                  <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{entry?.number ?? '—'}</td>
+                  <td style={styles.td}>
+                    {description}
+                    {agent ? <span style={styles.key}> · {agent.name}</span> : null}
+                    {entry?.adjustmentKind ? (
+                      <span style={styles.badge}>{adjustmentWords(entry.adjustmentKind)}</span>
+                    ) : null}
+                    {entry?.status === 'reversed' ? (
+                      <span style={styles.badge}>reversed</span>
+                    ) : null}
+                    {entry?.reversalOf ? <span style={styles.badge}>reversal</span> : null}
+                  </td>
+                  <td style={{ ...styles.td, ...styles.num }}>
+                    {line.debit !== null ? money(line.debit, symbol) : ''}
+                  </td>
+                  <td style={{ ...styles.td, ...styles.num }}>
+                    {line.credit !== null ? money(line.credit, symbol) : ''}
+                  </td>
+                </tr>,
+                isOpen ? (
+                  <tr key={`${line.id}-detail`}>
+                    <td style={{ padding: 0 }} colSpan={5}>
+                      <LineDetail lineage={lineage} line={line} symbol={symbol} />
+                    </td>
+                  </tr>
+                ) : null,
+              ]
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

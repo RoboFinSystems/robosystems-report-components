@@ -34,6 +34,11 @@ const styles: Record<string, CSSProperties> = {
   layoutWithPanel: {
     gridTemplateColumns: 'minmax(0, 1fr) 340px',
   },
+  // A file that carries its lineage opens a figure onto a line table, which
+  // needs the room a 340px panel does not have.
+  layoutWithLineagePanel: {
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(340px, 520px)',
+  },
   entity: {
     fontFamily: 'var(--rs-font-heading, var(--rs-font-sans, sans-serif))',
     textAlign: 'center',
@@ -76,7 +81,11 @@ export function ReportView({ report, inspect = true, dimensionAxis = 'rows' }: R
       <div
         style={{
           ...styles.layout,
-          ...(inspect && selectedRow ? styles.layoutWithPanel : {}),
+          ...(inspect && selectedRow
+            ? report.lineage
+              ? styles.layoutWithLineagePanel
+              : styles.layoutWithPanel
+            : {}),
         }}
       >
         <div>
