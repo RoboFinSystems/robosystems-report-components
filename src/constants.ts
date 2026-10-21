@@ -15,6 +15,7 @@ export const NS = {
   xbrli: 'http://www.xbrl.org/2003/instance#',
   link: 'http://www.xbrl.org/2003/linkbase#',
   iso4217: 'http://www.xbrl.org/2003/iso4217#',
+  prov: 'http://www.w3.org/ns/prov#',
 } as const
 
 /** Frequently-referenced full IRIs, pre-concatenated for terseness. */
@@ -40,6 +41,12 @@ export const IRI = {
   stringValue: NS.rs + 'stringValue',
   contentType: NS.rs + 'contentType',
   decimals: NS.rs + 'decimals',
+  // A fact's provenance, as xbrlkit writes it: PROV-O where PROV-O has the
+  // word, the rs vocabulary for the kind and the content hash.
+  sourceKind: NS.rs + 'sourceKind',
+  contentHash: NS.rs + 'contentHash',
+  hadPrimarySource: NS.prov + 'hadPrimarySource',
+  wasAttributedTo: NS.prov + 'wasAttributedTo',
   dimension: NS.rs + 'dimension',
   axis: NS.rs + 'axis',
   member: NS.rs + 'member',

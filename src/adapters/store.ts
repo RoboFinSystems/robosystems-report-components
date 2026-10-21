@@ -16,6 +16,7 @@ import type {
   ElementInfo,
   EntityInfo,
   Fact,
+  FactProvenance,
   InformationBlock,
   NormalizedReport,
   NumericKind,
@@ -64,6 +65,23 @@ function makeReaders(store: Store) {
   const subjectsOfType = (type: string): string[] =>
     store.getSubjects(namedNode(IRI.type), namedNode(type), null).map((t) => t.value)
   return { objects, firstValue, subjectsOfType }
+}
+
+/** The descriptor when any of its four parts is present; `undefined` otherwise,
+ * so a filing's facts carry no provenance key at all. */
+export function readProvenance(
+  kind: string | null | undefined,
+  source: string | null | undefined,
+  contentHash: string | null | undefined,
+  attributedTo: string | null | undefined
+): FactProvenance | undefined {
+  if (!kind && !source && !contentHash && !attributedTo) return undefined
+  return {
+    kind: kind ?? null,
+    source: source ?? null,
+    contentHash: contentHash ?? null,
+    attributedTo: attributedTo ?? null,
+  }
 }
 
 function toNumber(raw: string | null): number | null {
@@ -168,6 +186,12 @@ export function parseStore(store: Store): NormalizedReport {
     // Net Income) is presented in more than one structure. Read them ALL; taking
     // only the first (firstValue) drops the fact from every section but one.
     const factSets = objects(id, IRI.factSet).map((o) => o.value)
+    const provenance = readProvenance(
+      firstValue(id, IRI.sourceKind),
+      firstValue(id, IRI.hadPrimarySource),
+      firstValue(id, IRI.contentHash),
+      firstValue(id, IRI.wasAttributedTo)
+    )
     facts.push({
       id,
       element: firstValue(id, IRI.element) ?? '',
@@ -181,6 +205,7 @@ export function parseStore(store: Store): NormalizedReport {
       contentType: firstValue(id, IRI.contentType),
       decimals: firstValue(id, IRI.decimals),
       dimensions: dimensions.length ? dimensions : undefined,
+      ...(provenance ? { provenance } : {}),
     })
   }
 
