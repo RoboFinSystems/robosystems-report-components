@@ -18,6 +18,7 @@ import {
 import type { NormalizedReport, PivotRow, PivotTable, UnitInfo } from '../model'
 import { footCheck } from '../project'
 import { attributionWords, isHttpIri, provenanceWords, shortHash } from '../provenance'
+import { LineageWalk } from './LineageWalk'
 
 export interface FactInspectorProps {
   report: NormalizedReport
@@ -192,6 +193,8 @@ export function FactInspector({ report, table, row, columnIndex, onClose }: Fact
           </div>
         </div>
       ) : null}
+
+      {fact ? <LineageWalk report={report} fact={fact} symbol={sym} /> : null}
 
       {foot ? (
         <div style={styles.footing}>
