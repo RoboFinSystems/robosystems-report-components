@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { PivotTable } from '../src'
 import { detectReportFormat, parseReportDocument } from '../src/adapters/detect'
-import { isTaviDocument, parseTavi } from '../src/adapters/tavi'
+import { isTaviDocument, parseTavi, type TaviDocument } from '../src/adapters/tavi'
 import { buildPivots, reportSections } from '../src/pivot'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -702,5 +702,25 @@ describe('tavi adapter — a RoboLedger report', () => {
     expect(rowCellAt(balance, 'rs-gaap:Assets', '2025-12-31')).toBeCloseTo(57985.02, 2)
     expect(rowCellAt(balance, 'rs-gaap:Liabilities', '2025-12-31')).toBe(800)
     expect(r.calcAssociations.some((a) => a.weight === -1 || a.weight === 1)).toBe(true)
+  })
+})
+
+describe('a Tavi fact that says how it was made', () => {
+  it('carries the same projection from its properties', () => {
+    const doc = structuredClone(DOC) as unknown as TaviDocument
+    doc.xbrlModel!.facts![0].properties = [
+      { property: 'rs:sourceKind', value: 'pivot' },
+      { property: 'rs:contentHash', value: 'sha256:abc123' },
+      { property: 'prov:wasAttributedTo', value: 'posted ledger' },
+    ]
+    const r = parseTavi(doc)
+    const assets = r.facts.find((f) => f.id === 'rpt:f-1')
+    expect(assets?.provenance).toEqual({
+      kind: 'pivot',
+      source: null,
+      contentHash: 'sha256:abc123',
+      attributedTo: 'posted ledger',
+    })
+    expect('provenance' in (r.facts.find((f) => f.id === 'rpt:f-2') ?? {})).toBe(false)
   })
 })

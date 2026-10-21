@@ -110,6 +110,25 @@ export interface DimensionQualifier {
   typedValue?: string | null
 }
 
+/**
+ * Where a fact came from, as its producer states it. A filing carries none of
+ * this; a report produced from a ledger says how each figure was made. The
+ * holon writes it as PROV-O (`prov:hadPrimarySource`, `prov:wasAttributedTo`)
+ * plus `rs:sourceKind` and `rs:contentHash`; a Tavi model as fact properties
+ * under the same names. The un-entitled projection carries the kind, the hash
+ * and who asserted it — never an account or a ledger row.
+ */
+export interface FactProvenance {
+  /** The producer's word for how the fact was made: `pivot`, `rollup`, `derived`, `document`, … */
+  kind: string | null
+  /** IRI of the evidence the fact was derived from, when the producer names one. */
+  source: string | null
+  /** Algorithm-prefixed hash of the evidence (`sha256:<hex>`), checkable later. */
+  contentHash: string | null
+  /** IRI or name of the agent, rule or system that asserted the fact. */
+  attributedTo: string | null
+}
+
 /** A single reported value. */
 export interface Fact {
   id: string
@@ -151,6 +170,8 @@ export interface Fact {
    * segment/component breakdowns no longer overwrite the consolidated total.
    */
   dimensions?: DimensionQualifier[]
+  /** How the fact was made, when the report says. Absent on a filing. */
+  provenance?: FactProvenance | null
 }
 
 /** A calculation arc: `parent` (subtotal) rolls up `child * weight`. */

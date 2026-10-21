@@ -17,6 +17,7 @@ import {
 } from '../format'
 import type { NormalizedReport, PivotRow, PivotTable, UnitInfo } from '../model'
 import { footCheck } from '../project'
+import { attributionWords, isHttpIri, provenanceWords, shortHash } from '../provenance'
 
 export interface FactInspectorProps {
   report: NormalizedReport
@@ -159,6 +160,38 @@ export function FactInspector({ report, table, row, columnIndex, onClose }: Fact
         {element.balance ? <Field k="Balance">{element.balance}</Field> : null}
         {fact?.decimals ? <Field k="Decimals">{fact.decimals}</Field> : null}
       </div>
+
+      {fact?.provenance ? (
+        <div style={styles.footing} data-testid="fact-provenance">
+          <div style={styles.footTitle}>How it was made</div>
+          <div style={styles.grid}>
+            {provenanceWords(fact.provenance.kind) ? (
+              <Field k="Origin">{provenanceWords(fact.provenance.kind)}</Field>
+            ) : null}
+            {attributionWords(fact.provenance) ? (
+              <Field k="Asserted by">{attributionWords(fact.provenance)}</Field>
+            ) : null}
+            {fact.provenance.source ? (
+              <Field k="Source">
+                {isHttpIri(fact.provenance.source) ? (
+                  <a href={fact.provenance.source} target="_blank" rel="noreferrer">
+                    {fact.provenance.source}
+                  </a>
+                ) : (
+                  <span style={styles.mono}>{fact.provenance.source}</span>
+                )}
+              </Field>
+            ) : null}
+            {fact.provenance.contentHash ? (
+              <Field k="Evidence hash">
+                <span style={styles.mono} title={fact.provenance.contentHash}>
+                  {shortHash(fact.provenance.contentHash)}
+                </span>
+              </Field>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {foot ? (
         <div style={styles.footing}>

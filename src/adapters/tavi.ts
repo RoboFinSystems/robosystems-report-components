@@ -39,6 +39,7 @@ import type {
   UnitInfo,
 } from '../model'
 import { parseStructureName } from '../sections'
+import { readProvenance } from './store'
 import type { ReportAdapter } from './types'
 
 // ── The document, as far as this adapter reads it ───────────────────────────
@@ -541,6 +542,16 @@ export function parseTavi(doc: string | object): NormalizedReport {
         typedValue,
       })
     }
+    const prov = (name: string): string | null => {
+      const v = propertyValue(f.properties, name)
+      return typeof v === 'string' && v ? v : null
+    }
+    const provenance = readProvenance(
+      prov('rs:sourceKind'),
+      prov('prov:hadPrimarySource'),
+      prov('rs:contentHash'),
+      prov('prov:wasAttributedTo')
+    )
     const located = propertyValue(f.properties, LOCATION_PROPERTY)
     const stated = propertyValue(f.properties, SECTIONS_PROPERTY)
     const statedGroups =
@@ -579,6 +590,7 @@ export function parseTavi(doc: string | object): NormalizedReport {
       contentType: null,
       decimals,
       dimensions: dimensions.length ? dimensions : undefined,
+      ...(provenance ? { provenance } : {}),
     })
   }
 

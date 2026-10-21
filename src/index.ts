@@ -32,6 +32,7 @@ export {
   reportSections,
 } from './pivot'
 export * from './project'
+export * from './provenance'
 export * from './sections'
 
 // Components
