@@ -71,7 +71,7 @@
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-prettier": "^5.0.0",
-    "happy-dom": "^20.0.8",
+    "happy-dom": "^21.0.4",
     "prettier": "^3.0.0",
     "prettier-plugin-organize-imports": "^4.0.0",
     "react": "^19.2.0",
