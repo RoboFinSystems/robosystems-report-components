@@ -8,7 +8,7 @@ A source-agnostic React library for rendering XBRL-grade financial statements. T
 ## Features
 
 - **Components** — `ReportView`, `StatementTable`, `FactInspector`, and `ExternalTextBlock` for full statements down to per-fact inspection
-- **Five reference adapters** (under `/adapters`) — `parseJsonld` for canonical `holon.jsonld` files, `parseTavi` for `tavi.json` (the same filing as a Project Tavi compiled model, XBRL International's draft — the same facts, walked directly with no RDF step; `parseReportDocument` sniffs which of the two it was handed), `cypherAdapter` for live graphs over GraphQL, `fetchSecReportShell`/`fetchSecSection` for the SEC repository, and `parseStore` for pre-parsed RDF stores
+- **Five reference adapters** (under `/adapters`) — `parseJsonld` for canonical `holon.jsonld` files, `parseTavi` for `tavi.json` (the same filing as a Project Tavi compiled model, XBRL International's draft — the same facts, walked directly with no RDF step; `parseReportDocument` sniffs which of the two it was handed), `cypherAdapter` for the live SEC graph over the Cypher query endpoint, `fetchSecReportShell`/`fetchSecSection` for the SEC repository, and `parseStore` for pre-parsed RDF stores
 - **Statements as CSV** — `pivotToCsv(buildPivot(report, block))` writes a statement row for row as `StatementTable` shows it (depth, labels, negated signs), at full precision, with text cells guarded against running as spreadsheet formulas
 - **From a figure to the books** — a holon downloaded _with lineage_ carries a fourth named graph, `#lineage`, and the fact inspector walks it: each account a figure was summed from, the lines under it with their entries, events and counterparties, the balance before the described span, and the figure's evidence hash recomputed in the browser against the one the report froze (`checkFactLineage`). A plain holon renders exactly as before
 - **Correct-by-construction rendering** — presentation-order walk, calculation-subtotal footing, multi-factSet facts, and structure-title/kind parsing shared across all sources
@@ -38,7 +38,7 @@ export function Report() {
 
 ## Status
 
-**Pre-1.0.** Published to npm and consumed in production by RoboLedger and the xbrlkit viewer. The API surface may still evolve between minor versions until 1.0.
+**Pre-1.0.** Published to npm and consumed in production by RoboLedger, RoboInvestor, and the xbrlkit viewer. The API surface may still evolve between minor versions until 1.0.
 
 ## Resources
 
