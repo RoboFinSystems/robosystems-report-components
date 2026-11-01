@@ -54,10 +54,10 @@ Captures the vitest summary (`Test Files`, `Tests`), failing files/tests (`FAIL`
 - Vitest uses `✓` for pass and `✗`/`×` for fail, plus a `FAIL` prefix for files containing failures.
 - **`test/fixtures/` is Prettier-ignored on purpose** — it's verbatim sample data. A "formatting failure" there means something reformatted it; restore it rather than accepting the rewrite.
 - **A rendering fix isn't done without a fixture.** Fixtures are how bugs here get pinned; a passing test that doesn't exercise real report shape proves little.
-- **Build failures are usually config, not code.** The build is `tsup`, deliberately not `tsc`: with `moduleResolution: "Bundler"`, tsc emits extensionless relative imports that Node's ESM resolver rejects. If you're tempted to "simplify" the build to plain tsc, read the comment in `tsup.config.ts` first — CI's "Verify dist loads under Node ESM" step exists to catch exactly that regression, and it runs on **Node 22 and 24**.
+- **Build failures are usually config, not code.** The build is `tsup`, deliberately not `tsc`: with `moduleResolution: "Bundler"`, tsc emits extensionless relative imports that Node's ESM resolver rejects. If you're tempted to "simplify" the build to plain tsc, read the comment in `tsup.config.ts` first — CI's "Verify dist loads under Node ESM" step exists to catch exactly that regression, and it runs on **Node 24 and 26**.
 - **`react` / `react-dom` are external peers.** A test failure that looks like duplicate-React or invalid-hook-call usually means something bundled them.
 - **Never bump `version` in `package.json` to make anything pass** — the release workflow owns it.
-- CI runs this same gate on Node 22 and 24; a green local run on one version doesn't guarantee the other if the change touches runtime APIs.
+- CI runs this same gate on Node 24 and 26; a green local run on one version doesn't guarantee the other if the change touches runtime APIs.
 
 ## Goal
 

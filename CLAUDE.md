@@ -69,6 +69,6 @@ under CI. Never bypass them with `--no-verify`.
   (via the Claude API). For milestone releases, commit curated notes to
   `.github/release-notes/v<version>.md` _before_ dispatching `create-release.yml` — when that file
   exists at the tagged ref it replaces the generated changelog (and the stats section is skipped).
-- CI (`test.yml`) runs the full gate on Node 22 and 24; releases build on 24.
+- CI (`test.yml`) runs the full gate on Node 24 and 26; releases build on 24.
 - Only `dist/`, `README.md`, and `LICENSE` are published (`files` in `package.json`, with
   `.npmignore` as defense in depth).

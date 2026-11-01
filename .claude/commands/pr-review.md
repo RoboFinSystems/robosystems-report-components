@@ -38,7 +38,7 @@ gh api repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<NUMBE
 
 - Formal `reviews` and inline comments are typically **empty**, `reviewDecision` blank. That's the norm, not a skipped review.
 - **AI review is opt-in** — `claude.yml` fires only on an `@claude` mention from an `OWNER`/`MEMBER`/`COLLABORATOR`, and findings land as a **bot comment in `comments`**, not a formal review.
-- CI runs the full gate on **Node 22 and 24**, plus a **"Verify dist loads under Node ESM"** step. That step is this repo's signature check — it exists because tsc's `moduleResolution: "Bundler"` output is unloadable by Node's native resolver, and it's what catches a build-config regression.
+- CI runs the full gate on **Node 24 and 26**, plus a **"Verify dist loads under Node ESM"** step. That step is this repo's signature check — it exists because tsc's `moduleResolution: "Bundler"` output is unloadable by Node's native resolver, and it's what catches a build-config regression.
 - **What CI cannot see: the consumers.** Nothing installs the built package into `roboledger-app` or `xbrlkit-viewer`. Green CI means it builds and loads, not that statements still render correctly downstream.
 - `NEUTRAL`/`SKIPPED` conclusions are not failures.
 
