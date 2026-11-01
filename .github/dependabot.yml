@@ -69,6 +69,13 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - 'version-update:semver-major'
+      # Held until the 5.1 line (#64): a dot-zero major seasons first.
+      # Only 5.0.x is ignored, so the first 5.1 release still opens a PR —
+      # that is the moment to move vite and vitest together. Drop this entry
+      # once it lands.
+      - dependency-name: 'vitest'
+        versions:
+          - '5.0.x'
       #
       # Deliberately absent, in case someone copies this file from a sibling:
       # no `eslint` major ignore. The frontend apps and robosystems-core block
