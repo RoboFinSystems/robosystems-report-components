@@ -60,7 +60,7 @@ updates:
         update-types:
           - 'version-update:semver-major'
       # @types/node tracks the runtime floor, not npm's cadence. This package
-      # declares engines >=22.0.0 — matching robosystems-core and
+      # declares engines >=24.0.0 — matching robosystems-core and
       # robosystems-typescript-client, the other two published libraries — and
       # as a library it has to keep compiling for the oldest Node it claims to
       # support. Newer types would let code referencing Node 24+ APIs typecheck
