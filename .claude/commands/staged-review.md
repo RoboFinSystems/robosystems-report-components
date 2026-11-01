@@ -41,7 +41,7 @@ This library renders numbers people reconcile against. Treat any change to what 
 - Do rendering changes come with a fixture? Fixtures are how bugs here get fixed and kept fixed.
 - `test/fixtures/` is verbatim sample data and is **Prettier-ignored on purpose** — don't flag its formatting, and don't reformat it.
 - Is the test asserting correct behavior, or just what the code currently does?
-- Are both Node 22 and 24 in play? CI runs the gate on both; a change relying on newer runtime behavior fails only on 22.
+- Are both Node 24 and 26 in play? CI runs the gate on both; a change relying on newer runtime behavior fails only on 22.
 
 ## Public-repo hygiene
 

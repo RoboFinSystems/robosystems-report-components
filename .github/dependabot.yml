@@ -64,8 +64,8 @@ updates:
       # robosystems-typescript-client, the other two published libraries — and
       # as a library it has to keep compiling for the oldest Node it claims to
       # support. Newer types would let code referencing Node 24+ APIs typecheck
-      # clean here and still break a consumer on Node 22. Drop this entry when
-      # engines moves off >=22.
+      # clean here and still break a consumer on Node 24. Move this with the
+      # floor.
       - dependency-name: '@types/node'
         update-types:
           - 'version-update:semver-major'

@@ -33,7 +33,7 @@ INTERNAL
 
 <!-- How the change was verified. Run `npm run test:all` (format:check -> lint -> typecheck -> test
      -> build) before opening; the gate is CHECK-ONLY, so fix and re-stage rather than expecting it
-     to rewrite for you. CI runs the same gate on Node 22 and 24 plus a "dist loads under Node ESM"
+     to rewrite for you. CI runs the same gate on Node 24 and 26 plus a "dist loads under Node ESM"
      step.
 
      A rendering change is not done without a fixture that pins it. Say which fixtures cover this.
