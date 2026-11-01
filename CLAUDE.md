@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `@robosystems/report-components` — a published, MIT-licensed npm package: source-agnostic React
 components for rendering XBRL-grade financial statements. Plain React + ESM, `react`/`react-dom` as
-peer deps only, no framework imports. **Pre-1.0**, but consumed in production by `roboledger-app` and
-`xbrlkit-viewer`, so the exported surface is a real API contract.
+peer deps only, no framework imports. **Pre-1.0**, but consumed in production by `roboledger-app`,
+`roboinvestor-app` and `xbrlkit-viewer`, so the exported surface is a real API contract.
 
 ## Commands
 
@@ -28,16 +28,18 @@ under CI. Never bypass them with `--no-verify`.
 
 - `src/model.ts` — `NormalizedReport`, the load-bearing seam: facts, Information Blocks, elements /
   periods / units / entity, and the calculation + presentation association networks
-- `src/adapters/` — one file per source (`jsonld`, `store`, `sec`, `cypher`) behind the
-  `ReportAdapter` contract in `types.ts`
+- `src/adapters/` — one file per source (`jsonld`, `tavi`, `store`, `sec`, `cypher`) behind the
+  `ReportAdapter` contract in `types.ts`; `detect.ts` tells a holon from a Tavi model
 - `src/pivot.ts` — the fact pivot engine (a section is a hypercube; rendering it is pivoting its
   fact table, with each cell keyed on a fact's full aspect signature)
 - `src/project.ts` — presentation-order walk, calculation-subtotal set, `footCheck`
 - `src/sections.ts` — structure role definition → title + `SectionKind`, shared by all adapters
 - `src/format.ts`, `src/constants.ts` — value formatting / scaling and shared vocabulary
+- `src/lineage.ts`, `src/provenance.ts` — reading a figure's lineage, and words for its provenance
+- `src/csv.ts` — a pivot table as CSV
 - `src/chart/` — chart projection (join, format, palette) for `TimeSeriesChart`
 - `src/components/` — `ReportView`, `StatementTable`, `FactInspector`, `ExternalTextBlock`,
-  `TimeSeriesChart`
+  `TimeSeriesChart`, `LineageWalk`
 - `src/index.ts` + `src/adapters/index.ts` — the two build entries, matching the `.` and `./adapters`
   export paths. A symbol not re-exported here is not public API
 - `test/` — Vitest specs; `test/fixtures/` is verbatim sample data and is Prettier-ignored
@@ -62,8 +64,8 @@ under CI. Never bypass them with `--no-verify`.
 ## Release & Publish
 
 - `create-release.yml` (manual dispatch, `major|minor|patch`) bumps the version on `main`, creates
-  `release/<version>`, then `tag-release.yml` tags it and cuts the GitHub release, and a `publish`
-  job in the same run (gated by the `production` environment) runs `npm publish --provenance` from
+  `release/<version>`, then `tag-release.yml` (the reusable workflow in `robosystems`) tags it and
+  cuts the GitHub release, and a `publish` job in the same run (gated by the `production` environment) runs `npm publish --provenance` from
   the tag. `npm run release:create [type]` dispatches that workflow and checks the branch out locally.
 - **Release notes**: `tag-release.yml` auto-generates the changelog from changes since the last tag
   (via the Claude API). For milestone releases, commit curated notes to
