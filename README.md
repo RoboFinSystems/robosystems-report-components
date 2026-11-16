@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/@robosystems%2Freport-components.svg)](https://www.npmjs.com/package/@robosystems/report-components)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
+Part of RoboSystems, the open-source knowledge graph for finance. A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
 
 ## Features
 
