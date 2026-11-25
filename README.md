@@ -3,26 +3,29 @@
 [![npm version](https://badge.fury.io/js/@robosystems%2Freport-components.svg)](https://www.npmjs.com/package/@robosystems/report-components)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Part of RoboSystems, the open-source knowledge graph for finance. A source-agnostic React library for rendering XBRL-grade financial statements. The same components render financial statements from **any** source — a static `holon.jsonld` file (a report's canonical dataset-form holon), a live general ledger, or a graph database (entity graph or the SEC repository) — because the render logic is source-independent. The only thing that varies is a thin **data adapter** that turns its source into a normalized report model; the components handle the presentation-order walk, calculation-subtotal footing, and Information-Block table projection identically for every adapter.
+**The financial-statement renderer for [RoboSystems](https://github.com/RoboFinSystems/robosystems), the open-source knowledge graph for finance.** `@robosystems/report-components` renders XBRL-grade statements from any source: a report's `holon.jsonld`, a live general ledger, an entity graph or the SEC repository. The render logic is the same for every source; only a thin data adapter varies, turning its source into one normalized report model.
 
-## Features
+The components then do the same work for every adapter: walk the presentation order, foot the calculation subtotals and project Information-Block tables.
 
-- **Components** — `ReportView`, `StatementTable`, `FactInspector`, and `ExternalTextBlock` for full statements down to per-fact inspection
-- **Five reference adapters** (under `/adapters`) — `parseJsonld` for canonical `holon.jsonld` files, `parseTavi` for `tavi.json` (the same filing as a Project Tavi compiled model, XBRL International's draft — the same facts, walked directly with no RDF step; `parseReportDocument` sniffs which of the two it was handed), `cypherAdapter` for the live SEC graph over the Cypher query endpoint, `fetchSecReportShell`/`fetchSecSection` for the SEC repository, and `parseStore` for pre-parsed RDF stores
-- **Statements as CSV** — `pivotToCsv(buildPivot(report, block))` writes a statement row for row as `StatementTable` shows it (depth, labels, negated signs), at full precision, with text cells guarded against running as spreadsheet formulas
-- **From a figure to the books** — a holon downloaded _with lineage_ carries a fourth named graph, `#lineage`, and the fact inspector walks it: each account a figure was summed from, the lines under it with their entries, events and counterparties, the balance before the described span, and the figure's evidence hash recomputed in the browser against the one the report froze (`checkFactLineage`). A plain holon renders exactly as before
-- **Correct-by-construction rendering** — presentation-order walk, calculation-subtotal footing, multi-factSet facts, and structure-title/kind parsing shared across all sources
-- **Plain React, ESM, tree-shakeable** — `react`/`react-dom` peers only, no framework-specific imports; the same package feeds a Next.js app or a lightweight Vite app
+## What it does
 
-## Installation
+- **Components**: `ReportView`, `StatementTable`, `FactInspector` and `ExternalTextBlock`, from a full statement down to one fact
+- **Adapters** (`/adapters`): `parseJsonld` for a canonical `holon.jsonld`; `parseTavi` for `tavi.json`, the same filing as a Project Tavi compiled model (XBRL International's draft), walked directly with no RDF step; `parseReportDocument` to sniff which of the two it was handed; `cypherAdapter` for the live SEC graph over the Cypher query endpoint; `fetchSecReportShell` / `fetchSecSection` for the SEC repository; and `parseStore` for pre-parsed RDF stores
+- **Statements as CSV**: `pivotToCsv(buildPivot(report, block))` writes a statement row for row as `StatementTable` shows it (depth, labels, negated signs), at full precision, with text cells guarded against running as spreadsheet formulas
+- **From a figure to the books**: a holon downloaded _with lineage_ carries a fourth named graph, `#lineage`, and the fact inspector walks it: the accounts a figure was summed from, the lines under each with their entries, events and counterparties, the balance before the span, and the figure's evidence hash recomputed in the browser against the one the report froze (`checkFactLineage`). A plain holon renders as before
+- **Plain React**: ESM and tree-shakeable, with `react` / `react-dom` as the only peers and no framework-specific imports, so the same package feeds a Next.js app or a Vite app
+
+## Install
 
 ```bash
 npm install @robosystems/report-components
 ```
 
+Needs Node.js 24 or later, and React 18 or later in the consuming app.
+
 ## Usage
 
-Render a statement by feeding `ReportView` a normalized report model produced by an adapter:
+Feed `ReportView` the report model an adapter produces:
 
 ```tsx
 import { ReportView } from '@robosystems/report-components'
@@ -36,22 +39,18 @@ export function Report() {
 }
 ```
 
-## Status
+## Versioning
 
-**Pre-1.0.** Published to npm and consumed in production by RoboLedger, RoboInvestor, and the xbrlkit viewer. The API surface may still evolve between minor versions until 1.0.
+Pre-1.0: the API can change in a minor release, named in the [release notes](https://github.com/RoboFinSystems/robosystems-report-components/releases). It runs in production in RoboLedger, RoboInvestor and the [xbrlkit viewer](https://github.com/RoboFinSystems/xbrlkit-viewer).
 
-## Resources
+## Documentation
 
-- [RoboSystems Platform](https://robosystems.ai)
-- [GitHub Repository](https://github.com/RoboFinSystems/robosystems-report-components)
-- [API Reference](https://robosystems.ai/docs/api)
+- **Technical docs**: [robosystems.ai/docs/technical](https://robosystems.ai/docs/technical). For this package: [Reporting & Rendering](https://robosystems.ai/docs/technical/reporting-and-rendering) · [Serialization & Export](https://robosystems.ai/docs/technical/serialization-and-export) · [Information Blocks](https://robosystems.ai/docs/technical/information-blocks)
+- **Related**: [RoboSystems](https://github.com/RoboFinSystems/robosystems) · [xbrlkit](https://github.com/RoboFinSystems/xbrlkit) · [xbrlkit viewer](https://github.com/RoboFinSystems/xbrlkit-viewer) · [roboledger-app](https://github.com/RoboFinSystems/roboledger-app) · [roboinvestor-app](https://github.com/RoboFinSystems/roboinvestor-app)
 
 ## Support
 
-- [Issues](https://github.com/RoboFinSystems/robosystems-report-components/issues)
-- [Documentation](https://robosystems.ai/docs/technical)
-- [Projects](https://github.com/orgs/RoboFinSystems/projects)
-- [Discussions](https://github.com/orgs/RoboFinSystems/discussions)
+- [Issues](https://github.com/RoboFinSystems/robosystems-report-components/issues) · [Discussions](https://github.com/orgs/RoboFinSystems/discussions) · [Projects](https://github.com/orgs/RoboFinSystems/projects)
 
 ## License
 
